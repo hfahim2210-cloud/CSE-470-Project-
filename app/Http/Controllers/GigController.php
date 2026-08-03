@@ -9,10 +9,11 @@ use Illuminate\Http\Request;
 class GigController extends Controller
 {
     /**
-     * Displayinggg public gig feed (Browse, Filter, Sort, Search). */
+     * Display the public gig feed (Browse, Filter, Sort, Search).
+     */
     public function index(Request $request)
     {
-        $query = Gig::where('is_active', true);
+        $query = Gig::where('is_archived', false);
 
         // Search by keyword (title or description)
         if ($request->filled('search')) {
@@ -43,11 +44,11 @@ class GigController extends Controller
     }
 
     /**
-     * seller er public profile
+     * Display a seller's public profile.
      */
     public function sellerProfile(User $user)
     {
-        $gigs = $user->gigs()->where('is_active', true)->latest()->get();
+        $gigs = $user->gigs()->where('is_archived', false)->latest()->get();
 
         return view('gigs.seller-profile', compact('user', 'gigs'));
     }

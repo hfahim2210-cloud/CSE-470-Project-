@@ -12,7 +12,8 @@ class Gig extends Model
         'description',
         'price',
         'category',
-        'is_active',
+        'delivery_time',
+        'is_archived',
     ];
 
     /**

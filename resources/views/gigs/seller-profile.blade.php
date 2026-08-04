@@ -6,7 +6,7 @@
 </head>
 <body>
 
-    <p><a href="{{ route('gigs.index') }}">&larr; Back to Gigs</a></p>
+    <p><a href="{{ route('gigs.marketplace') }}">&larr; Back to Gigs</a></p>
 
     <h1>{{ $user->name }}</h1>
     <p>Member since {{ $user->created_at->format('F Y') }}</p>

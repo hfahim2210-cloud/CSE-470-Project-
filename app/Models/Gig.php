@@ -23,17 +23,13 @@ class Gig extends Model
         'is_archived',
     ];
 
-    /**
-     * Get the seller (User) who owns this gig.
-     */
+    //seller who owns this gig
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get all portfolio items attached to this gig.
-     */
+    //portfolio items attached to dis gig
     public function portfolioItems(): HasMany
     {
         return $this->hasMany(PortfolioItem::class);

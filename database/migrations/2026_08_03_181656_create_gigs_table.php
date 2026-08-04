@@ -13,13 +13,14 @@ return new class extends Migration
     {
     Schema::create('gigs', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Seller/User ID
+        $table->foreignId('user_id')->constrained()->onDelete('cascade');
         $table->string('title');
-        $table->string('category'); // e.g., Academics, Tech, Creative
         $table->text('description');
+        $table->string('category');
         $table->decimal('price', 8, 2);
-        $table->integer('delivery_time'); // in days
-        $table->boolean('is_archived')->default(false); // Archive feature
+        $table->integer('delivery_time');
+        $table->string('image')->nullable(); // <-- Stores the cover image path
+        $table->string('status')->default('active');
         $table->timestamps();
     });
     }

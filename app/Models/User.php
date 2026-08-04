@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -21,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role', // Optional: if you store seller/buyer roles
     ];
 
     /**
@@ -47,9 +49,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the gigs created by this user.
+     * Get all gigs created by the seller.
      */
-    public function gigs()
+    public function gigs(): HasMany
     {
         return $this->hasMany(Gig::class);
     }

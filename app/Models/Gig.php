@@ -37,4 +37,12 @@ class Gig extends Model
     {
         return $this->hasMany(PortfolioItem::class);
     }
+
+    /**
+     * Get all orders created for this gig.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
 }

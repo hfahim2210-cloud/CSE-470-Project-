@@ -11,7 +11,10 @@
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>My Seller Gigs</h2>
-        <a href="{{ route('gigs.create') }}" class="btn btn-primary">+ Create New Gig</a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('orders.index') }}" class="btn btn-outline-success">View Orders</a>
+            <a href="{{ route('gigs.create') }}" class="btn btn-primary">+ Create New Gig</a>
+        </div>
     </div>
 
     @if(session('success'))

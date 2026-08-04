@@ -18,7 +18,7 @@ class Gig extends Model
         'category',
         'price',
         'delivery_time',
-        'cover_image',
+        'image',
         'status',
     ];
 

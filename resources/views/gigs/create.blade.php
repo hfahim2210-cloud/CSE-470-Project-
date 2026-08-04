@@ -56,9 +56,10 @@
                         </div>
 
                         <!-- Delivery Days -->
+                        <!-- Delivery Days -->
                         <div class="mb-3">
-                            <label for="delivery_days" class="form-label font-weight-bold">Delivery Time (Days)</label>
-                            <input type="number" name="delivery_days" id="delivery_days" class="form-control" value="{{ old('delivery_days') }}" placeholder="3" min="1" required>
+                            <label for="delivery_time" class="form-label font-weight-bold">Delivery Time (Days)</label>
+                            <input type="number" name="delivery_time" id="delivery_time" class="form-control" value="{{ old('delivery_time') }}" placeholder="3" min="1" required>
                         </div>
 
                         <!-- Description -->

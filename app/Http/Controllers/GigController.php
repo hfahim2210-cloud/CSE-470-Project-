@@ -6,6 +6,7 @@ use App\Models\Gig;
 use App\Models\PortfolioItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class GigController extends Controller
 {
@@ -14,7 +15,7 @@ class GigController extends Controller
      */
     public function index()
     {
-        // Get all gigs created by the logged-in seller
+        // Get all gigs created by the logged-in seller (or fallback ID 1)
         $gigs = Gig::where('user_id', Auth::id() ?? 1)
                    ->latest()
                    ->get();
@@ -37,48 +38,134 @@ class GigController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'required|string',
             'category' => 'required|string',
             'price' => 'required|numeric|min:1',
-            'delivery_days' => 'required|integer|min:1',
+            'delivery_time' => 'required|integer|min:1',
+            'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'portfolio_files.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5000',
+            'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
 
-        // Handle cover image upload
-        $imagePath = null;
+        // 1. Store uploaded cover image path into $validated['image']
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('gigs', 'public');
+            $validated['image'] = $request->file('image')->store('gigs', 'public');
         }
 
-        // Create the Gig
-        $gig = Gig::create([
-            'user_id' => Auth::id() ?? 1, // Defaulting to user 1 for now until auth is installed
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'category' => $validated['category'],
-            'price' => $validated['price'],
-            'delivery_time' => $validated['delivery_days'],
-            'image' => $imagePath,
-            'status' => 'active',
-        ]);
+        // 2. Assign default user_id
+        $validated['user_id'] = Auth::id() ?? 1;
 
-        // Handle Multiple Portfolio Uploads
-        if ($request->hasFile('portfolio_files')) {
-            foreach ($request->file('portfolio_files') as $file) {
-                $filePath = $file->store('portfolios', 'public');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $fileType = in_array($extension, ['jpg', 'jpeg', 'png']) ? 'image' : 'pdf';
+        // 3. Keep $portfolioFiles separate so it doesn't break Gig::create()
+        $portfolioFiles = $request->file('portfolio_files');
 
-                PortfolioItem::create([
-                    'gig_id' => $gig->id,
-                    'title' => $file->getClientOriginalName(),
+        // Unset portfolio_files array key because it belongs in the portfolio_items table
+        unset($validated['portfolio_files']);
+
+        // 4. Create the Gig record (includes the saved 'image' path)
+        $gig = Gig::create($validated);
+
+        // 5. Store related portfolio items if uploaded
+        if ($portfolioFiles) {
+            foreach ($portfolioFiles as $file) {
+                $filePath = $file->store('portfolio', 'public');
+                $gig->portfolioItems()->create([
                     'file_path' => $filePath,
-                    'file_type' => $fileType,
+                    'file_type' => $file->getClientOriginalExtension(),
                 ]);
             }
         }
 
-        return redirect()->route('gigs.index')->with('success', 'Gig and portfolio items uploaded successfully!');
+        return redirect()->route('gigs.index')->with('success', 'Gig created successfully!');
+    }
+
+    /**
+     * Display the specified gig with its portfolio items.
+     */
+    public function show($id)
+    {
+        $gig = Gig::with('portfolioItems')->findOrFail($id);
+        return view('gigs.show', compact('gig'));
+    }
+
+    /**
+     * Show the form for editing the specified gig.
+     */
+    public function edit($id)
+    {
+        $gig = Gig::findOrFail($id);
+        return view('gigs.edit', compact('gig'));
+    }
+
+    /**
+     * Update the specified gig in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        $gig = Gig::findOrFail($id);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'category' => 'required|string',
+            'price' => 'required|numeric|min:1',
+            'delivery_time' => 'required|integer|min:1',
+            'description' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+        ]);
+
+        // 1. Handle replacement cover image upload
+        if ($request->hasFile('image')) {
+            // Delete old cover image from disk if it exists
+            if ($gig->image && Storage::disk('public')->exists($gig->image)) {
+                Storage::disk('public')->delete($gig->image);
+            }
+
+            // Save new cover image
+            $validated['image'] = $request->file('image')->store('gigs', 'public');
+        }
+
+        // 2. Extract new portfolio files if present
+        $portfolioFiles = $request->file('portfolio_files');
+        unset($validated['portfolio_files']);
+
+        // 3. Update gig details
+        $gig->update($validated);
+
+        // 4. Add additional portfolio files if uploaded
+        if ($portfolioFiles) {
+            foreach ($portfolioFiles as $file) {
+                $filePath = $file->store('portfolio', 'public');
+                $gig->portfolioItems()->create([
+                    'file_path' => $filePath,
+                    'file_type' => $file->getClientOriginalExtension(),
+                ]);
+            }
+        }
+
+        return redirect()->route('gigs.show', $gig->id)->with('success', 'Gig updated successfully!');
+    }
+
+    /**
+     * Remove the specified gig and its media files from storage.
+     */
+    public function destroy($id)
+    {
+        $gig = Gig::with('portfolioItems')->findOrFail($id);
+
+        // 1. Delete associated cover image from storage
+        if ($gig->image && Storage::disk('public')->exists($gig->image)) {
+            Storage::disk('public')->delete($gig->image);
+        }
+
+        // 2. Delete associated portfolio files from storage
+        foreach ($gig->portfolioItems as $item) {
+            if ($item->file_path && Storage::disk('public')->exists($item->file_path)) {
+                Storage::disk('public')->delete($item->file_path);
+            }
+        }
+
+        // 3. Delete database record
+        $gig->delete();
+
+        return redirect()->route('gigs.index')->with('success', 'Gig deleted successfully!');
     }
 }

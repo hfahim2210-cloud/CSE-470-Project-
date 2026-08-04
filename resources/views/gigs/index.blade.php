@@ -24,10 +24,11 @@
         @forelse($gigs as $gig)
             <div class="col-md-4 mb-4">
                 <div class="card h-100 shadow-sm border-0">
-                    @if($gig->image)
-                        <img src="{{ asset('storage/' . $gig->image) }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ $gig->title }}">
+                    {{-- Display uploaded thumbnail image or fallback --}}
+                    @if($gig->cover_image)
+                        <img src="{{ asset('storage/' . $gig->cover_mage) }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ $gig->title }}">
                     @else
-                        <div class="bg-secondary text-white text-center py-5">No Thumbnail</div>
+                        <div class="bg-secondary text-white text-center py-5">No Cover Image</div>
                     @endif
 
                     <div class="card-body">
@@ -36,9 +37,15 @@
                         <p class="card-text text-muted">{{ Str::limit($gig->description, 80) }}</p>
                     </div>
 
-                    <div class="card-footer bg-white d-flex justify-content-between align-items-center border-top-0">
-                        <strong class="text-success">${{ $gig->price }}</strong>
-                        <small class="text-muted">{{ $gig->delivery_days }} Days Delivery</small>
+                    <div class="card-footer bg-white border-top-0 pt-0">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <strong class="text-success fs-5">${{ number_format($gig->price, 2) }}</strong>
+                            {{-- Corrected column name from delivery_days to delivery_time --}}
+                            <small class="text-muted">⏱️ {{ $gig->delivery_time }} {{ Str::plural('Day', $gig->delivery_time) }} Delivery</small>
+                        </div>
+                        
+                        {{-- Clickable View Details Button --}}
+                        <a href="{{ route('gigs.show', $gig->id) }}" class="btn btn-outline-primary btn-sm w-100">View Details</a>
                     </div>
                 </div>
             </div>

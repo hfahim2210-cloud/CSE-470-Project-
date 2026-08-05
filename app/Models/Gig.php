@@ -20,7 +20,7 @@ class Gig extends Model
         'delivery_time',
         'image',
         'status',
-        'is_archived',
+        //'is_archived',
     ];
 
     //seller who owns this gig

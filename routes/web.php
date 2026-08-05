@@ -16,3 +16,5 @@ Route::get('/sellers/{user}', [GigController::class, 'sellerProfile'])->name('se
 
 // 4. Resource route registers ALL Seller CRUD routes (index, create, store, show, edit, update, destroy)
 Route::resource('gigs', GigController::class);
+Route::patch('/gigs/{id}/archive', [GigController::class, 'archive'])->name('gigs.archive');
+Route::patch('/gigs/{id}/restore', [GigController::class, 'restore'])->name('gigs.restore');

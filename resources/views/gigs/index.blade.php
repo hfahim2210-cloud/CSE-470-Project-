@@ -3,183 +3,147 @@
 @section('title', 'My Seller Dashboard - GigEx')
 
 @section('content')
-<div class="container py-4">
-    {{-- Header Section --}}
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-            <h2 class="fw-bold mb-1">My Seller Dashboard</h2>
-            <p class="text-muted mb-0">Manage, archive, and monitor your active listings.</p>
-        </div>
 
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{{ route('orders.index') }}" class="btn btn-outline-success">
-                <i class="bi bi-box-seam me-1"></i> View Orders
-            </a>
-
-            <a href="{{ route('gigs.create') }}" class="btn btn-primary d-flex align-items-center">
-                <i class="bi bi-plus-lg me-1"></i> Create New Gig
-            </a>
-        </div>
+{{-- Header Section --}}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">My Seller Dashboard</h2>
+        <p class="text-muted mb-0">Manage, archive, and monitor your active listings.</p>
     </div>
+    <div class="d-flex gap-2">
+        <a href="{{ route('orders.index') }}" class="btn btn-outline-success d-flex align-items-center">
+            <i class="bi bi-box-seam me-1"></i> View Orders
+        </a>
 
-    {{-- Success Message --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
-    {{-- Error Message --}}
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
-    {{-- Validation Errors --}}
-    @if($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <div class="row g-4">
-        @forelse($gigs as $gig)
-            @php
-                $gigStatus = strtolower($gig->status ?? 'active');
-                $imagePath = $gig->image ?? $gig->cover_image ?? null;
-            @endphp
-
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 shadow-sm border-0">
-                    {{-- Gig Cover Image --}}
-                    @if($imagePath)
-                        <img
-                            src="{{ asset('storage/' . $imagePath) }}"
-                            class="card-img-top"
-                            style="height: 190px; object-fit: cover;"
-                            alt="{{ $gig->title }}"
-                        >
-                    @else
-                        <div
-                            class="bg-secondary-subtle text-secondary d-flex align-items-center justify-content-center"
-                            style="height: 190px;"
-                        >
-                            <div class="text-center">
-                                <i class="bi bi-image fs-1"></i>
-                                <div>No Cover Image</div>
-                            </div>
-                        </div>
-                    @endif
-
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                            <span class="badge bg-info text-dark">
-                                {{ $gig->category }}
-                            </span>
-
-                            @if($gigStatus === 'archived')
-                                <span class="badge bg-secondary">Archived</span>
-                            @else
-                                <span class="badge bg-success">Active</span>
-                            @endif
-                        </div>
-
-                        <h5 class="card-title fw-bold">{{ $gig->title }}</h5>
-                        <p class="card-text text-muted">
-                            {{ \Illuminate\Support\Str::limit($gig->description, 100) }}
-                        </p>
-
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <strong class="text-success fs-5">
-                                ${{ number_format($gig->price, 2) }}
-                            </strong>
-
-                            <small class="text-muted">
-                                <i class="bi bi-clock me-1"></i>
-                                {{ $gig->delivery_time }}
-                                {{ \Illuminate\Support\Str::plural('day', $gig->delivery_time) }}
-                            </small>
-                        </div>
-                    </div>
-
-                    <div class="card-footer bg-white border-top-0 pt-0 pb-3">
-                        <div class="d-grid gap-2">
-                            <a href="{{ route('gigs.show', $gig->id) }}" class="btn btn-outline-primary">
-                                <i class="bi bi-eye me-1"></i> View Details
-                            </a>
-
-                            <div class="d-flex gap-2">
-                                <a href="{{ route('gigs.edit', $gig->id) }}" class="btn btn-outline-warning flex-fill">
-                                    <i class="bi bi-pencil-square me-1"></i> Edit
-                                </a>
-
-                                @if($gigStatus === 'archived')
-                                    <form action="{{ route('gigs.restore', $gig->id) }}" method="POST" class="flex-fill">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="btn btn-outline-success w-100">
-                                            <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
-                                        </button>
-                                    </form>
-                                @else
-                                    <form
-                                        action="{{ route('gigs.archive', $gig->id) }}"
-                                        method="POST"
-                                        class="flex-fill"
-                                        onsubmit="return confirm('Archive this gig? It will no longer appear in public searches.');"
-                                    >
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="btn btn-outline-secondary w-100">
-                                            <i class="bi bi-archive me-1"></i> Archive
-                                        </button>
-                                    </form>
-                                @endif
-                            </div>
-
-                            <form
-                                action="{{ route('gigs.destroy', $gig->id) }}"
-                                method="POST"
-                                onsubmit="return confirm('Delete this gig permanently?');"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-outline-danger w-100">
-                                    <i class="bi bi-trash me-1"></i> Delete
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center py-5">
-                        <i class="bi bi-briefcase fs-1 text-muted"></i>
-                        <h4 class="mt-3">No gigs created yet</h4>
-                        <p class="text-muted">Create your first service listing to start receiving hire requests.</p>
-                        <a href="{{ route('gigs.create') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-lg me-1"></i> Create Your First Gig
-                        </a>
-                    </div>
-                </div>
-            </div>
-        @endforelse
+        <a href="{{ route('gigs.create') }}" class="btn btn-primary d-flex align-items-center">
+            <i class="bi bi-plus-lg me-1"></i> Create New Gig
+        </a>
     </div>
-
-    {{-- Pagination, when the controller uses paginate() --}}
-    @if(method_exists($gigs, 'links'))
-        <div class="mt-4">
-            {{ $gigs->links() }}
-        </div>
-    @endif
 </div>
+
+{{-- Navigation Tabs --}}
+<ul class="nav nav-tabs mb-4 border-bottom" id="gigTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold px-4" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-gigs" type="button" role="tab">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>Active Gigs ({{ $activeGigs->count() }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link text-secondary fw-bold px-4" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-gigs" type="button" role="tab">
+            <i class="bi bi-archive-fill text-warning me-2"></i>Archived Gigs ({{ $archivedGigs->count() }})
+        </button>
+    </li>
+</ul>
+
+{{-- Tab Content Areas --}}
+<div class="tab-content" id="gigTabsContent">
+
+    {{-- ================= ACTIVE GIGS TAB ================= --}}
+    <div class="tab-pane fade show active" id="active-gigs" role="tabpanel" aria-labelledby="active-tab">
+        <div class="row">
+            @forelse($activeGigs as $gig)
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm border-0">
+                        @if($gig->image)
+                            <img src="{{ asset('storage/' . $gig->image) }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ $gig->title }}">
+                        @else
+                            <div class="bg-secondary text-white text-center py-5">No Cover Image</div>
+                        @endif
+
+                        <div class="card-body">
+                            <span class="badge bg-info text-dark mb-2">{{ $gig->category }}</span>
+                            <h5 class="card-title fw-bold text-truncate">{{ $gig->title }}</h5>
+                            <p class="card-text text-muted small">{{ Str::limit($gig->description, 80) }}</p>
+                        </div>
+
+                        <div class="card-footer bg-white border-top-0 pt-0">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <strong class="text-success fs-5">${{ number_format($gig->price, 2) }}</strong>
+                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ $gig->delivery_time }} {{ Str::plural('Day', $gig->delivery_time) }}</small>
+                            </div>
+                            
+                            <div class="d-flex gap-1 justify-content-between">
+                                <a href="{{ route('gigs.show', $gig->id) }}" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
+                                <a href="{{ route('gigs.edit', $gig->id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                
+                                {{-- Archive Button --}}
+                                <form action="{{ route('gigs.archive', $gig->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-outline-warning btn-sm">Archive</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="col-12 text-center py-5">
+                    <div class="mb-3">
+                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                    </div>
+                    <p class="text-muted fs-5">No active gigs found.</p>
+                    <a href="{{ route('gigs.create') }}" class="btn btn-outline-primary">Create Your First Gig</a>
+                </div>
+            @endforelse
+        </div>
+    </div>
+
+    {{-- ================= ARCHIVED GIGS TAB ================= --}}
+    <div class="tab-pane fade" id="archived-gigs" role="tabpanel" aria-labelledby="archived-tab">
+        <div class="row">
+            @forelse($archivedGigs as $gig)
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm border-0 opacity-75">
+                        @if($gig->image)
+                            <img src="{{ asset('storage/' . $gig->image) }}" class="card-img-top" style="height: 180px; object-fit: cover; filter: grayscale(50%);" alt="{{ $gig->title }}">
+                        @else
+                            <div class="bg-secondary text-white text-center py-5">No Cover Image</div>
+                        @endif
+
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-secondary">{{ $gig->category }}</span>
+                                <span class="badge bg-warning text-dark">Archived</span>
+                            </div>
+                            <h5 class="card-title fw-bold text-truncate">{{ $gig->title }}</h5>
+                            <p class="card-text text-muted small">{{ Str::limit($gig->description, 80) }}</p>
+                        </div>
+
+                        <div class="card-footer bg-white border-top-0 pt-0">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <strong class="text-secondary fs-5">${{ number_format($gig->price, 2) }}</strong>
+                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ $gig->delivery_time }} {{ Str::plural('Day', $gig->delivery_time) }}</small>
+                            </div>
+                            
+                            <div class="d-flex gap-2 justify-content-between">
+                                {{-- Restore Button --}}
+                                <form action="{{ route('gigs.restore', $gig->id) }}" method="POST" class="d-inline flex-grow-1">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-success btn-sm w-100">Restore</button>
+                                </form>
+
+                                {{-- Permanent Delete Button --}}
+                                <form action="{{ route('gigs.destroy', $gig->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Permanently delete this gig? This cannot be undone.')">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="col-12 text-center py-5">
+                    <div class="mb-3">
+                        <i class="bi bi-archive fs-1 text-muted"></i>
+                    </div>
+                    <p class="text-muted fs-5">No archived gigs.</p>
+                </div>
+            @endforelse
+        </div>
+    </div>
+
+</div>
+
 @endsection

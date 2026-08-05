@@ -97,17 +97,14 @@
                                 Open Order & Deliverable
                             </a>
                         @else
-                            {{-- TEMPORARY PLACEHOLDER: remove when Accept Hire Request creates real orders. --}}
-                            <form action="{{ route('orders.demo.store', $gig) }}" method="POST" class="mb-2">
-                                @csrf
-                                <button type="submit" class="btn btn-success btn-lg w-100">
-                                    Create Demo Order
-                                </button>
-                            </form>
-                            <small class="text-muted d-block mb-3">
-                                Temporary button for testing Submit and Approve Deliverable.
-                            </small>
+                            <a href="{{ route('hire-requests.create', $gig) }}" class="btn btn-success btn-lg w-100 mb-2">
+                                Submit Hire Request
+                            </a>
                         @endif
+
+                        <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-success w-100 mb-2">
+                            Review Hire Requests
+                        </a>
 
                         <a href="{{ route('orders.index') }}" class="btn btn-outline-primary w-100 mb-4">View All Orders</a>
 

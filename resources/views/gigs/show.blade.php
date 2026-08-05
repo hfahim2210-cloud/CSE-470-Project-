@@ -92,8 +92,24 @@
 
                         <hr>
 
-                        <button class="btn btn-success btn-lg w-100 mb-2">Order Now</button>
-                        <button class="btn btn-outline-primary w-100 mb-4">Contact Seller</button>
+                        @if($gig->orders->isNotEmpty())
+                            <a href="{{ route('orders.show', $gig->orders->first()) }}" class="btn btn-success btn-lg w-100 mb-2">
+                                Open Order & Deliverable
+                            </a>
+                        @else
+                            {{-- TEMPORARY PLACEHOLDER: remove when Accept Hire Request creates real orders. --}}
+                            <form action="{{ route('orders.demo.store', $gig) }}" method="POST" class="mb-2">
+                                @csrf
+                                <button type="submit" class="btn btn-success btn-lg w-100">
+                                    Create Demo Order
+                                </button>
+                            </form>
+                            <small class="text-muted d-block mb-3">
+                                Temporary button for testing Submit and Approve Deliverable.
+                            </small>
+                        @endif
+
+                        <a href="{{ route('orders.index') }}" class="btn btn-outline-primary w-100 mb-4">View All Orders</a>
 
                         {{-- Seller Actions: Edit & Delete --}}
                         <div class="border-top pt-3">

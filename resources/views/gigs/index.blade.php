@@ -10,7 +10,11 @@
         <h2 class="fw-bold mb-1">My Seller Dashboard</h2>
         <p class="text-muted mb-0">Manage, archive, and monitor your active listings.</p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
+        <a href="{{ route('orders.index') }}" class="btn btn-outline-success d-flex align-items-center">
+            <i class="bi bi-box-seam me-1"></i> View Orders
+        </a>
+
         <a href="{{ route('gigs.create') }}" class="btn btn-primary d-flex align-items-center">
             <i class="bi bi-plus-lg me-1"></i> Create New Gig
         </a>

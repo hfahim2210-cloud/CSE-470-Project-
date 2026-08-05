@@ -163,7 +163,7 @@ class GigController extends Controller
      */
     public function show($id)
     {
-        $gig = Gig::with('portfolioItems')->findOrFail($id);
+        $gig = Gig::with(['portfolioItems', 'orders'])->findOrFail($id);
         return view('gigs.show', compact('gig'));
     }
 
@@ -223,7 +223,7 @@ class GigController extends Controller
      */
     public function destroy($id)
     {
-        $gig = Gig::with('portfolioItems')->findOrFail($id);
+        $gig = Gig::with(['portfolioItems', 'orders'])->findOrFail($id);
 
         if ($gig->image && Storage::disk('public')->exists($gig->image)) {
             Storage::disk('public')->delete($gig->image);

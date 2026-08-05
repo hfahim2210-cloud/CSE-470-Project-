@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GigController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DeliverableController;
+use App\Http\Controllers\HireRequestController;
 
 // 1. Redirect root homepage to the Gigs seller management list
 Route::get('/', function () {
@@ -16,10 +17,18 @@ Route::get('/gigs/marketplace', [GigController::class, 'marketplace'])->name('gi
 // 3. Seller Profile View
 Route::get('/sellers/{user}', [GigController::class, 'sellerProfile'])->name('sellers.profile');
 
-// TEMPORARY PLACEHOLDER:
-// Remove this route after the Accept Hire Request feature creates real orders.
-Route::post('/gigs/{gig}/demo-order', [OrderController::class, 'createDemo'])
-    ->name('orders.demo.store');
+// 4. Submit and accept hire requests (Mahi - Module 3)
+Route::get('/gigs/{gig}/hire', [HireRequestController::class, 'create'])
+    ->name('hire-requests.create');
+
+Route::post('/gigs/{gig}/hire', [HireRequestController::class, 'store'])
+    ->name('hire-requests.store');
+
+Route::get('/seller/hire-requests', [HireRequestController::class, 'incoming'])
+    ->name('hire-requests.incoming');
+
+Route::patch('/hire-requests/{hireRequest}/accept', [HireRequestController::class, 'accept'])
+    ->name('hire-requests.accept');
 
 // 4. Resource route registers ALL Seller CRUD routes (index, create, store, show, edit, update, destroy)
 Route::resource('gigs', GigController::class);

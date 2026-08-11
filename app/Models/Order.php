@@ -49,4 +49,15 @@ class Order extends Model
     {
         return $this->hasOne(Deliverable::class);
     }
+
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(Review::class);
+    }
+
+    public function rating(): HasOne
+    {
+        return $this->hasOne(Rating::class);
+    }
 }

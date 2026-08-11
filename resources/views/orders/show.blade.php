@@ -159,6 +159,123 @@
                 {{ optional($order->completed_at)->diffForHumans() }}.
             </p>
         </div>
+
+        {{-- Existing Feedback --}}
+        @if($order->review || $order->rating)
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h3 class="h5 mb-0">Buyer Feedback</h3>
+                </div>
+                <div class="card-body p-4">
+                    @if($order->rating)
+                        <p class="mb-3">
+                            <strong>Rating:</strong>
+                            <span class="text-warning fs-5">
+                                @for($i = 1; $i <= 5; $i++)
+                                    {{ $i <= $order->rating->rating ? '★' : '☆' }}
+                                @endfor
+                            </span>
+                            ({{ $order->rating->rating }}/5)
+                        </p>
+                    @endif
+
+                    @if($order->review)
+                        <p class="mb-1"><strong>Text Review:</strong></p>
+                        <div class="bg-light rounded p-3">
+                            {{ $order->review->review_text }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
+
+        {{-- Only the buyer can leave/update feedback once the order is completed. --}}
+        @if(!Auth::check() || Auth::id() === $order->buyer_id)
+            <div class="row g-4">
+
+                {{-- Feature 3: Leave Text Review --}}
+                <div class="col-md-7">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-primary text-white py-3">
+                            <h3 class="h5 mb-0">Feature 3 — Leave Text Review</h3>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <form action="{{ route('orders.review.store', $order) }}" method="POST">
+                                @csrf
+
+                                <div class="mb-3">
+                                    <label for="review_text" class="form-label fw-bold">
+                                        Write your review
+                                    </label>
+
+                                    <textarea
+                                        name="review_text"
+                                        id="review_text"
+                                        rows="5"
+                                        class="form-control"
+                                        maxlength="2000"
+                                        required
+                                        placeholder="Describe your experience with this service..."
+                                    >{{ old('review_text', $order->review?->review_text) }}</textarea>
+
+                                    <small class="text-muted">
+                                        Review can only be submitted after the order is completed.
+                                    </small>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    {{ $order->review ? 'Update Text Review' : 'Submit Text Review' }}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Feature 4: Leave Star Rating --}}
+                <div class="col-md-5">
+                    <div class="card shadow-sm border-warning h-100">
+                        <div class="card-header bg-warning py-3">
+                            <h3 class="h5 mb-0">Feature 4 — Leave Star Rating</h3>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <form action="{{ route('orders.rating.store', $order) }}" method="POST">
+                                @csrf
+
+                                <label for="rating" class="form-label fw-bold">
+                                    Rate this service
+                                </label>
+
+                                <select
+                                    name="rating"
+                                    id="rating"
+                                    class="form-select mb-3"
+                                    required
+                                >
+                                    <option value="">Select 1-5 stars</option>
+
+                                    @for($star = 5; $star >= 1; $star--)
+                                        <option
+                                            value="{{ $star }}"
+                                            {{ (int) old('rating', $order->rating?->rating) === $star ? 'selected' : '' }}
+                                        >
+                                            {{ $star }} {{ $star === 1 ? 'Star' : 'Stars' }}
+                                            {{ str_repeat('★', $star) }}
+                                        </option>
+                                    @endfor
+                                </select>
+
+                                <button type="submit" class="btn btn-warning">
+                                    {{ $order->rating ? 'Update Star Rating' : 'Submit Star Rating' }}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        @endif
     @endif
 </div>
 </body>

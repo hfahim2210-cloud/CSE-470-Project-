@@ -5,6 +5,7 @@ use App\Http\Controllers\GigController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DeliverableController;
 use App\Http\Controllers\HireRequestController;
+use App\Http\Controllers\FeedbackController;
 
 // 1. Redirect root homepage to the Gigs seller management list
 Route::get('/', function () {
@@ -50,3 +51,11 @@ Route::post('/orders/{order}/deliverable', [DeliverableController::class, 'store
 // 7. Approve Final Deliverable
 Route::patch('/orders/{order}/deliverable/approve', [DeliverableController::class, 'approve'])
     ->name('orders.deliverable.approve');
+
+// 8. Leave Text Review
+Route::post('/orders/{order}/review', [FeedbackController::class, 'storeReview'])
+    ->name('orders.review.store');
+
+// 9. Leave Star Rating
+Route::post('/orders/{order}/rating', [FeedbackController::class, 'storeRating'])
+    ->name('orders.rating.store');

@@ -130,6 +130,53 @@
                 </div>
             </div>
         </div>
+
+        {{-- Completed-order Reviews and Ratings --}}
+        @php
+            $feedbackOrders = $gig->orders
+                ->where('status', 'completed')
+                ->filter(fn ($order) => $order->review || $order->rating);
+        @endphp
+
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-header bg-white py-3">
+                <h4 class="mb-0">Customer Reviews</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @forelse($feedbackOrders as $feedbackOrder)
+                    <div class="{{ !$loop->last ? 'border-bottom pb-3 mb-3' : '' }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ $feedbackOrder->buyer->name ?? 'Buyer' }}</strong>
+
+                                @if($feedbackOrder->rating)
+                                    <div class="text-warning fs-5">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            {{ $i <= $feedbackOrder->rating->rating ? '★' : '☆' }}
+                                        @endfor
+
+                                        <small class="text-muted fs-6">
+                                            ({{ $feedbackOrder->rating->rating }}/5)
+                                        </small>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        @if($feedbackOrder->review)
+                            <p class="mt-2 mb-0">
+                                {{ $feedbackOrder->review->review_text }}
+                            </p>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-muted mb-0">
+                        No reviews or ratings have been submitted for this gig yet.
+                    </p>
+                @endforelse
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

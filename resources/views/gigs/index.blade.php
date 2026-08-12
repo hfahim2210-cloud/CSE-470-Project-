@@ -51,8 +51,32 @@
                         @endif
 
                         <div class="card-body">
-                            <span class="badge bg-info text-dark mb-2">{{ $gig->category }}</span>
-                            <h5 class="card-title fw-bold text-truncate">{{ $gig->title }}</h5>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-info text-dark">{{ $gig->category }}</span>
+                                
+                                {{-- Availability Status Badges --}}
+                                @if(!$gig->is_accepting_orders)
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-pause-circle-fill me-1"></i> Paused (Exam Mode)
+                                    </span>
+                                @elseif($gig->activeOrdersCount() >= $gig->max_weekly_orders)
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-slash-circle-fill me-1"></i> Fully Booked
+                                    </span>
+                                @else
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Accepting Orders
+                                    </span>
+                                @endif
+                            </div>
+
+                            <h5 class="card-title fw-bold text-truncate mb-1">{{ $gig->title }}</h5>
+                            
+                            {{-- Workload Counter --}}
+                            <div class="text-muted small mb-2">
+                                <i class="bi bi-speedometer2 me-1"></i> {{ $gig->activeOrdersCount() }} / {{ $gig->max_weekly_orders }} active slots filled
+                            </div>
+
                             <p class="card-text text-muted small">{{ Str::limit($gig->description, 80) }}</p>
                         </div>
 

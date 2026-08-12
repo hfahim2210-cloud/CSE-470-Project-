@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $gig->title }} - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </head>
 <body class="bg-light py-5">
     <div class="container">
@@ -12,6 +13,13 @@
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                {{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
@@ -34,7 +42,7 @@
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="badge bg-info text-dark">{{ $gig->category }}</span>
-                            {{-- Relative Time (e.g. 2 hours ago) --}}
+                            {{-- Relative Time --}}
                             <small class="text-muted">📅 Posted {{ $gig->created_at->diffForHumans() }}</small>
                         </div>
 
@@ -48,7 +56,7 @@
                         <h5 class="fw-bold">About This Gig</h5>
                         <p class="card-text text-secondary mb-4" style="white-space: pre-line; line-height: 1.7;">{{ $gig->description }}</p>
 
-                        {{-- Portfolio Work Samples (if any exist) --}}
+                        {{-- Portfolio Work Samples --}}
                         @if($gig->portfolioItems && $gig->portfolioItems->count() > 0)
                             <hr class="my-4">
                             <h5 class="fw-bold mb-3">Portfolio & Work Samples</h5>
@@ -76,7 +84,7 @@
                 </div>
             </div>
 
-            {{-- Right Column: Pricing, Order Action, & Seller Controls --}}
+            {{-- Right Column: Pricing, Capacity Check, Order Action, & Seller Controls --}}
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
                     <div class="card-body p-4">
@@ -92,15 +100,44 @@
 
                         <hr>
 
-                        @if($gig->orders->isNotEmpty())
-                            <a href="{{ route('orders.show', $gig->orders->first()) }}" class="btn btn-success btn-lg w-100 mb-2">
-                                Open Order & Deliverable
-                            </a>
-                        @else
-                            <a href="{{ route('hire-requests.create', $gig) }}" class="btn btn-success btn-lg w-100 mb-2">
-                                Submit Hire Request
-                            </a>
-                        @endif
+                        {{-- ⚡ Dynamic Hire Button / Capacity State Logic --}}
+                        <div class="mb-3">
+                            @if($gig->orders->isNotEmpty())
+                                <a href="{{ route('orders.show', $gig->orders->first()) }}" class="btn btn-success btn-lg w-100 mb-2">
+                                    Open Order & Deliverable
+                                </a>
+                            @elseif($gig->isAvailable())
+                                <!-- ACTIVE: Hiring Available -->
+                                <a href="{{ route('hire-requests.create', $gig) }}" class="btn btn-success btn-lg w-100 mb-2">
+                                    <i class="bi bi-send-fill me-1"></i> Submit Hire Request
+                                </a>
+                                <div class="text-center">
+                                    <small class="text-muted">
+                                        <i class="bi bi-speedometer2 me-1"></i> {{ $gig->activeOrdersCount() }} / {{ $gig->max_weekly_orders }} slots filled this week
+                                    </small>
+                                </div>
+                            @else
+                                <!-- LOCKED: Exam Mode or Capacity Reached -->
+                                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                    <i class="bi bi-lock-fill me-1"></i> 
+                                    @if(!$gig->is_accepting_orders)
+                                        Paused (Exam Mode / Holiday)
+                                    @else
+                                        Fully Booked This Week
+                                    @endif
+                                </button>
+                                <div class="text-center">
+                                    <span class="badge bg-warning text-dark px-3 py-1">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> 
+                                        @if(!$gig->is_accepting_orders)
+                                            Orders currently paused by seller
+                                        @else
+                                            Capacity Reached ({{ $gig->activeOrdersCount() }}/{{ $gig->max_weekly_orders }})
+                                        @endif
+                                    </span>
+                                </div>
+                            @endif
+                        </div>
 
                         <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-success w-100 mb-2">
                             Review Hire Requests

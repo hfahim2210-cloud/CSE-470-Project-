@@ -18,19 +18,44 @@ class GigController extends Controller
     {
         $userId = Auth::id() ?? 1;
 
-        // Active Gigs (status != 'archived')
+        // Active Gigs with eager-loaded active order counts to optimize performance
         $activeGigs = Gig::where('user_id', $userId)
-                         ->where('status', '!=', 'archived')
-                         ->latest()
-                         ->get();
+            ->where('status', '!=', 'archived')
+            ->withCount(['orders as active_orders_count' => function ($query) {
+                $query->whereIn('status', ['pending', 'in_progress']);
+            }])
+            ->latest()
+            ->get();
 
-        // Archived Gigs (status = 'archived')
+        // Archived Gigs
         $archivedGigs = Gig::where('user_id', $userId)
-                           ->where('status', 'archived')
-                           ->latest()
-                           ->get();
+            ->where('status', 'archived')
+            ->latest()
+            ->get();
 
         return view('gigs.index', compact('activeGigs', 'archivedGigs'));
+    }
+
+    /**
+     * Quick toggle for Exam Mode / accepting orders.
+     */
+    public function toggleAcceptingOrders($id)
+    {
+        $gig = Gig::findOrFail($id);
+
+        if ($gig->user_id !== (Auth::id() ?? 1)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $gig->update([
+            'is_accepting_orders' => !$gig->is_accepting_orders
+        ]);
+
+        $statusMessage = $gig->is_accepting_orders 
+            ? 'Gig is now accepting orders.' 
+            : 'Gig paused (Exam Mode enabled).';
+
+        return redirect()->route('gigs.index')->with('success', $statusMessage);
     }
 
     /**
@@ -128,10 +153,14 @@ class GigController extends Controller
             'category' => 'required|string',
             'price' => 'required|numeric|min:1',
             'delivery_time' => 'required|integer|min:1',
+            'max_weekly_orders' => 'required|integer|min:1|max:50',
+            'is_accepting_orders' => 'nullable|boolean',
             'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
+
+        $validated['is_accepting_orders'] = $request->has('is_accepting_orders');
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('gigs', 'public');
@@ -188,15 +217,23 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
+        if ($gig->user_id !== (Auth::id() ?? 1)) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'category' => 'required|string',
             'price' => 'required|numeric|min:1',
             'delivery_time' => 'required|integer|min:1',
+            'max_weekly_orders' => 'required|integer|min:1|max:50',
+            'is_accepting_orders' => 'nullable|boolean',
             'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
+
+        $validated['is_accepting_orders'] = $request->has('is_accepting_orders');
 
         if ($request->hasFile('image')) {
             if ($gig->image && Storage::disk('public')->exists($gig->image)) {
@@ -234,6 +271,10 @@ class GigController extends Controller
             'orders.review',
             'orders.rating',
         ])->findOrFail($id);
+
+        if ($gig->user_id !== (Auth::id() ?? 1)) {
+            abort(403, 'Unauthorized action.');
+        }
 
         if ($gig->image && Storage::disk('public')->exists($gig->image)) {
             Storage::disk('public')->delete($gig->image);

@@ -20,16 +20,18 @@ class Gig extends Model
         'delivery_time',
         'image',
         'status',
+        'max_weekly_orders',
+        'is_accepting_orders',
         //'is_archived',
     ];
 
-    //seller who owns this gig
+    // Seller who owns this gig
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    //portfolio items attached to dis gig
+    // Portfolio items attached to this gig
     public function portfolioItems(): HasMany
     {
         return $this->hasMany(PortfolioItem::class);
@@ -41,5 +43,28 @@ class Gig extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Helper: Calculate active orders created in the current week.
+     */
+    public function activeOrdersCount(): int
+    {
+        return $this->orders()
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->where('created_at', '>=', now()->startOfWeek())
+            ->count();
+    }
+
+    /**
+     * Helper: Check if gig is available for hiring.
+     */
+    public function isAvailable(): bool
+    {
+        if (!$this->is_accepting_orders) {
+            return false;
+        }
+
+        return $this->activeOrdersCount() < $this->max_weekly_orders;
     }
 }

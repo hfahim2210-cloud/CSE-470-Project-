@@ -12,8 +12,27 @@
 
     <style>
         :root {
-            --brand-primary: #4f46e5; /* Indigo accent */
-            --brand-hover: #4338ca;
+            --bg-light: #EBF1F2;         /* Soft Light Mint/Ice Background */
+            --card-bg: #501F3A;          /* Deep Plum Containers */
+            --text-dark: #1C2526;        /* Crisp Dark Text for Body */
+            --text-muted: #627275;       /* Muted Text for Light BG */
+            --accent-primary: #CB2D6F;   /* Electric Rose CTA */
+            --accent-hover: #aa205a;     /* Darker Rose Hover */
+            --accent-secondary: #14A098; /* Vibrant Teal Accent */
+            --border-color: rgba(20, 160, 152, 0.25);
+        }
+
+        body {
+            background-color: var(--bg-light) !important;
+            color: var(--text-dark) !important;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Dark Header Navbar for Dual-Tone Look */
+        .navbar-custom {
+            background-color: #0F292F !important;
+            border-bottom: 2px solid var(--accent-secondary);
         }
 
         .navbar-brand {
@@ -21,34 +40,128 @@
             letter-spacing: -0.5px;
         }
 
+        .brand-accent {
+            color: var(--accent-primary) !important;
+        }
+
+        /* Search Bar Styling */
+        .search-input-group .input-group-text {
+            background-color: #1A3E46 !important;
+            border-color: var(--border-color) !important;
+            color: var(--accent-secondary) !important;
+        }
+
+        .search-input-group .form-control {
+            background-color: #1A3E46 !important;
+            border-color: var(--border-color) !important;
+            color: #ffffff !important;
+        }
+
+        .search-input-group .form-control::placeholder {
+            color: #A0B2B5 !important;
+        }
+
+        /* Navigation Links */
+        .nav-link {
+            color: #D1E0E2 !important;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover, 
+        .nav-link.active {
+            color: var(--accent-primary) !important;
+            font-weight: 600;
+        }
+
+        /* Primary Action Buttons */
         .btn-brand {
-            background-color: var(--brand-primary);
-            color: #ffffff;
+            background-color: var(--accent-primary) !important;
+            color: #ffffff !important;
             font-weight: 600;
             border: none;
+            transition: background-color 0.2s ease, transform 0.1s ease;
         }
 
         .btn-brand:hover {
-            background-color: var(--brand-hover);
-            color: #ffffff;
+            background-color: var(--accent-hover) !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
         }
 
-        .nav-link.active {
-            color: var(--brand-primary) !important;
-            font-weight: 600;
+        /* Dropdown Customization */
+        .dropdown-menu-dark-custom {
+            background-color: var(--card-bg) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 10px;
+        }
+
+        .dropdown-menu-dark-custom .dropdown-item {
+            color: #ffffff !important;
+        }
+
+        .dropdown-menu-dark-custom .dropdown-item:hover {
+            background-color: rgba(203, 45, 111, 0.2) !important;
+            color: var(--accent-primary) !important;
+        }
+
+        .dropdown-menu-dark-custom .dropdown-header {
+            color: #A0B2B5 !important;
+        }
+
+        /* Cards - Rich Dark Plum on Light Background */
+        .card {
+            background-color: var(--card-bg) !important;
+            color: #ffffff !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(15, 41, 47, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(15, 41, 47, 0.18) !important;
+        }
+
+        .card-header, 
+        .card-footer {
+            background-color: rgba(0, 0, 0, 0.2) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Alert Callouts */
+        .alert-success {
+            background-color: rgba(20, 160, 152, 0.15) !important;
+            border-color: var(--accent-secondary) !important;
+            color: #0F292F !important;
+            font-weight: 500;
+        }
+
+        /* Global Headings on Light Background */
+        h1, h2, h3, h4, h5, h6 {
+            color: #0F292F;
+        }
+
+        .card h1, 
+        .card h2, 
+        .card h3, 
+        .card h4, 
+        .card h5, 
+        .card h6 {
+            color: #ffffff !important;
         }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
     <!-- ⚡ GigEx Main Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-2">
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top shadow-sm py-2">
         <div class="container">
             
             <!-- Logo / Brand -->
             <a class="navbar-brand d-flex align-items-center me-4" href="{{ route('gigs.marketplace') }}">
-                <i class="bi bi-lightning-charge-fill text-warning me-2 fs-4"></i>
-                <span class="fw-bold text-white">Gig<span class="text-primary">Ex</span></span>
+                <i class="bi bi-lightning-charge-fill me-2 fs-4" style="color: var(--accent-secondary);"></i>
+                <span class="fw-bold text-white">Gig<span class="brand-accent">Ex</span></span>
             </a>
 
             <!-- Mobile Toggle Button -->
@@ -61,8 +174,8 @@
                 
                 <!-- Search Input -->
                 <form class="d-flex my-2 my-lg-0 me-auto flex-grow-1 max-w-md px-lg-3" action="{{ route('gigs.marketplace') }}" method="GET">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <div class="input-group search-input-group">
+                        <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
                         <input class="form-control border-start-0 ps-0 shadow-none" type="search" name="search" placeholder="Find student services (design, coding, writing...)" value="{{ request('search') }}">
                     </div>
                 </form>
@@ -90,14 +203,14 @@
 
                     <!-- Profile Dropdown -->
                     <div class="dropdown">
-                        <button class="btn btn-outline-light btn-sm rounded-circle p-1 ms-2" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle fs-5"></i>
+                        <button class="btn btn-outline-light btn-sm rounded-circle p-1 ms-2" type="button" data-bs-toggle="dropdown" style="border-color: var(--border-color);">
+                            <i class="bi bi-person-circle fs-5" style="color: var(--accent-secondary);"></i>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark-custom shadow border-0 mt-2">
                             <li><h6 class="dropdown-header">Logged in as Student</h6></li>
                             <li>
                                 <a class="dropdown-item d-flex align-items-center" href="{{ route('gigs.index') }}">
-                                    <i class="bi bi-collection-fill me-2 text-muted"></i> My Active Gigs
+                                    <i class="bi bi-collection-fill me-2" style="color: var(--accent-secondary);"></i> My Active Gigs
                                 </a>
                             </li>
                         </ul>

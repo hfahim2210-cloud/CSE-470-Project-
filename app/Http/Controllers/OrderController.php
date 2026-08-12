@@ -34,6 +34,15 @@ class OrderController extends Controller
      */
     public function createDemo(Gig $gig): RedirectResponse
     {
+        // 🛡️ Automated Capacity & Availability Guard Check
+        if (!$gig->isAvailable()) {
+            if (!$gig->is_accepting_orders) {
+                return back()->with('error', 'This seller has temporarily paused orders (Exam Mode / Taking a break).');
+            }
+
+            return back()->with('error', 'This gig has reached its maximum order capacity for the week!');
+        }
+
         $demoUserId = Auth::id() ?? $gig->user_id;
 
         $order = Order::firstOrCreate(

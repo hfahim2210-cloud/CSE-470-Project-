@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hire Requests - Student Gig Exchange</title>
+    <title>Incoming Hire Requests - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h2 mb-1">Hire Requests</h1>
-            <p class="text-muted mb-0">Seller: {{ $seller->name }}</p>
+            <h1 class="h2 mb-1">Incoming Hire Requests</h1>
+            <p class="text-muted mb-0">
+                Review requests sent to {{ $seller->name }}'s gigs. Pending requests appear first.
+            </p>
         </div>
         <a href="{{ route('gigs.index') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
     </div>
@@ -30,6 +32,7 @@
                         <th>Gig</th>
                         <th>Message</th>
                         <th>Deadline</th>
+                        <th>Received</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -44,6 +47,7 @@
                             <td>{{ $hireRequest->gig->title }}</td>
                             <td style="min-width: 260px;">{{ $hireRequest->message }}</td>
                             <td>{{ $hireRequest->proposed_deadline->format('d M Y') }}</td>
+                            <td>{{ $hireRequest->created_at->format('d M Y, h:i A') }}</td>
                             <td>
                                 <span class="badge {{ $hireRequest->status === 'accepted' ? 'bg-success' : 'bg-warning text-dark' }}">
                                     {{ ucfirst($hireRequest->status) }}
@@ -65,7 +69,9 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">No hire requests have been submitted yet.</td>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                No incoming hire requests have been submitted yet.
+                            </td>
                         </tr>
                     @endforelse
                     </tbody>

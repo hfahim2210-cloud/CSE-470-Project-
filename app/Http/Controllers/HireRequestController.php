@@ -82,7 +82,7 @@ class HireRequestController extends Controller
     }
 
     /**
-     * Small dependency page required for a seller to trigger Feature 2.
+     * Feature 3: show the seller all incoming hire requests for their gigs.
      */
     public function incoming(): View
     {
@@ -91,6 +91,10 @@ class HireRequestController extends Controller
         $hireRequests = HireRequest::query()
             ->with(['gig', 'buyer', 'order'])
             ->where('seller_id', $seller->id)
+            ->orderByRaw(
+                'CASE WHEN status = ? THEN 0 ELSE 1 END',
+                [HireRequest::STATUS_PENDING]
+            )
             ->latest()
             ->get();
 

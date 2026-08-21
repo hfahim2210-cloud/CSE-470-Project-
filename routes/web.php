@@ -52,10 +52,14 @@ Route::post('/orders/{order}/deliverable', [DeliverableController::class, 'store
 Route::patch('/orders/{order}/deliverable/approve', [DeliverableController::class, 'approve'])
     ->name('orders.deliverable.approve');
 
-// 8. Leave Text Review
+// 8. Request Revisions
+Route::patch('/orders/{order}/deliverable/request-revision', [DeliverableController::class, 'requestRevision'])
+    ->name('orders.deliverable.request-revision');
+
+// 9. Leave Text Review
 Route::post('/orders/{order}/review', [FeedbackController::class, 'storeReview'])
     ->name('orders.review.store');
 
-// 9. Leave Star Rating
+// 10. Leave Star Rating
 Route::post('/orders/{order}/rating', [FeedbackController::class, 'storeRating'])
     ->name('orders.rating.store');

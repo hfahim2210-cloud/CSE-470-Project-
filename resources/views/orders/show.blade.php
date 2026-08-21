@@ -84,6 +84,41 @@
         </div>
     @endif
 
+
+    @if($order->revisionRequests->isNotEmpty())
+        <div class="card shadow-sm border-warning mb-4">
+            <div class="card-header bg-warning-subtle py-3">
+                <h3 class="h5 mb-0">Revision Requests</h3>
+            </div>
+
+            <div class="card-body p-4">
+                @foreach($order->revisionRequests as $revision)
+                    <div class="{{ $loop->last ? '' : 'border-bottom pb-3 mb-3' }}">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            <strong>Revision request #{{ $revision->id }}</strong>
+
+                            <span class="badge {{ $revision->status === 'open' ? 'bg-warning text-dark' : 'bg-success' }}">
+                                {{ ucfirst($revision->status) }}
+                            </span>
+                        </div>
+
+                        <div class="bg-light rounded p-3">
+                            {{ $revision->request_text }}
+                        </div>
+
+                        <small class="text-muted d-block mt-2">
+                            Requested {{ optional($revision->requested_at)->format('F j, Y \a\t g:i A') }}
+
+                            @if($revision->resolved_at)
+                                &middot; Resolved {{ $revision->resolved_at->format('F j, Y \a\t g:i A') }}
+                            @endif
+                        </small>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     @if($order->status !== 'completed' && (!Auth::check() || Auth::id() === $order->seller_id))
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-primary text-white py-3">
@@ -151,6 +186,68 @@
         </div>
     @endif
 
+    @if($order->status === 'under_review'
+        && $order->deliverable?->status === 'submitted'
+        && (!Auth::check() || Auth::id() === $order->buyer_id))
+        <div class="card shadow-sm border-warning mb-4">
+            <div class="card-header bg-warning py-3">
+                <h3 class="h5 mb-0">Feature 3 — Request Revisions</h3>
+            </div>
+
+            <div class="card-body p-4">
+                <p class="text-muted">
+                    If the submitted work needs changes, describe exactly what the seller should revise.
+                    The order will return to <strong>Revision Requested</strong> instead of being completed.
+                </p>
+
+                <form
+                    action="{{ route('orders.deliverable.request-revision', $order) }}"
+                    method="POST"
+                    onsubmit="return confirm('Send this revision request to the seller?');"
+                >
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="mb-3">
+                        <label for="revision_request" class="form-label fw-bold">
+                            Changes needed
+                        </label>
+
+                        <textarea
+                            name="revision_request"
+                            id="revision_request"
+                            rows="5"
+                            class="form-control"
+                            minlength="5"
+                            maxlength="2000"
+                            required
+                            placeholder="Example: Please correct the final two pages and replace the low-resolution image."
+                        >{{ old('revision_request') }}</textarea>
+
+                        <small class="text-muted">
+                            The seller will see this message and can resubmit the corrected deliverable.
+                        </small>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning">
+                        Request Revisions
+                    </button>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    @if($order->status === 'revision_requested'
+        && (!Auth::check() || Auth::id() === $order->seller_id))
+        <div class="alert alert-warning shadow-sm">
+            <h4 class="alert-heading">Revision requested</h4>
+            <p class="mb-0">
+                Review the buyer's requested changes above, then use
+                <strong>Resubmit Final Deliverable</strong> to send the updated work.
+            </p>
+        </div>
+    @endif
+
     @if($order->status === 'completed')
         <div class="alert alert-success shadow-sm">
             <h4 class="alert-heading">Order completed</h4>
@@ -193,11 +290,11 @@
         @if(!Auth::check() || Auth::id() === $order->buyer_id)
             <div class="row g-4">
 
-                {{-- Feature 3: Leave Text Review --}}
+                {{-- Feature 4: Leave Text Review --}}
                 <div class="col-md-7">
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-header bg-primary text-white py-3">
-                            <h3 class="h5 mb-0">Feature 3 — Leave Text Review</h3>
+                            <h3 class="h5 mb-0">Feature 4 — Leave Text Review</h3>
                         </div>
 
                         <div class="card-body p-4">
@@ -232,11 +329,11 @@
                     </div>
                 </div>
 
-                {{-- Feature 4: Leave Star Rating --}}
+                {{-- Feature 5: Leave Star Rating --}}
                 <div class="col-md-5">
                     <div class="card shadow-sm border-warning h-100">
                         <div class="card-header bg-warning py-3">
-                            <h3 class="h5 mb-0">Feature 4 — Leave Star Rating</h3>
+                            <h3 class="h5 mb-0">Feature 5 — Leave Star Rating</h3>
                         </div>
 
                         <div class="card-body p-4">

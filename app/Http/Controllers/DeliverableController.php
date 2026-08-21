@@ -65,6 +65,14 @@ class DeliverableController extends Controller
                 ]
             );
 
+            // A resubmission satisfies any currently open revision request.
+            $order->revisionRequests()
+                ->where('status', 'open')
+                ->update([
+                    'status' => 'resolved',
+                    'resolved_at' => now(),
+                ]);
+
             $order->update([
                 'status' => 'under_review',
                 'completed_at' => null,
@@ -100,6 +108,50 @@ class DeliverableController extends Controller
             ->with('success', 'Deliverable approved. The order is now completed.');
     }
 
+    /**
+     * Feature 3: buyer requests changes to the submitted work before approval.
+     */
+    public function requestRevision(Request $request, Order $order): RedirectResponse
+    {
+        $this->ensureBuyerMayRequestRevision($order);
+
+        $validated = $request->validate([
+            'revision_request' => [
+                'required',
+                'string',
+                'min:5',
+                'max:2000',
+            ],
+        ]);
+
+        DB::transaction(function () use ($validated, $order): void {
+            $order->loadMissing('deliverable');
+
+            $order->revisionRequests()->create([
+                'deliverable_id' => $order->deliverable->id,
+                'buyer_id' => $order->buyer_id,
+                'request_text' => $validated['revision_request'],
+                'status' => 'open',
+                'requested_at' => now(),
+                'resolved_at' => null,
+            ]);
+
+            $order->deliverable->update([
+                'status' => 'revision_requested',
+                'approved_at' => null,
+            ]);
+
+            $order->update([
+                'status' => 'revision_requested',
+                'completed_at' => null,
+            ]);
+        });
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'Revision request sent to the seller.');
+    }
+
     private function ensureSellerMaySubmit(Order $order): void
     {
         // Once authentication is merged, only the actual seller may submit.
@@ -116,6 +168,29 @@ class DeliverableController extends Controller
         if (! in_array($order->status, ['in_progress', 'revision_requested', 'under_review'], true)) {
             throw ValidationException::withMessages([
                 'deliverable_file' => 'This order is not ready for final delivery.',
+            ]);
+        }
+    }
+
+    private function ensureBuyerMayRequestRevision(Order $order): void
+    {
+        // Match the project's current authentication fallback used by approval.
+        if (Auth::check() && Auth::id() !== $order->buyer_id) {
+            abort(403, 'Only the buyer assigned to this order can request revisions.');
+        }
+
+        $order->loadMissing('deliverable');
+
+        if (! $order->deliverable) {
+            throw ValidationException::withMessages([
+                'revision_request' => 'No deliverable has been submitted yet.',
+            ]);
+        }
+
+        if ($order->status !== 'under_review'
+            || $order->deliverable->status !== 'submitted') {
+            throw ValidationException::withMessages([
+                'revision_request' => 'Revisions can only be requested while a submitted deliverable is under review.',
             ]);
         }
     }

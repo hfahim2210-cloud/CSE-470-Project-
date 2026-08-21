@@ -21,7 +21,7 @@ class OrderController extends Controller
 
     public function show(Order $order): View
     {
-        $order->load(['gig', 'seller', 'buyer', 'deliverable', 'review', 'rating']);
+        $order->load(['gig', 'seller', 'buyer', 'deliverable', 'review', 'rating', 'revisionRequests']);
 
         return view('orders.show', compact('order'));
     }

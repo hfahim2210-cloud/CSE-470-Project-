@@ -22,6 +22,16 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -49,19 +59,41 @@
                             <td>{{ $hireRequest->proposed_deadline->format('d M Y') }}</td>
                             <td>{{ $hireRequest->created_at->format('d M Y, h:i A') }}</td>
                             <td>
-                                <span class="badge {{ $hireRequest->status === 'accepted' ? 'bg-success' : 'bg-warning text-dark' }}">
+                                <span class="badge {{ $hireRequest->status === 'accepted' ? 'bg-success' : ($hireRequest->status === 'declined' ? 'bg-danger' : 'bg-warning text-dark') }}">
                                     {{ ucfirst($hireRequest->status) }}
                                 </span>
                             </td>
                             <td>
                                 @if($hireRequest->status === 'pending')
-                                    <form method="POST" action="{{ route('hire-requests.accept', $hireRequest) }}" onsubmit="return confirm('Accept this hire request and create an order?');">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="btn btn-success btn-sm">Accept Request</button>
-                                    </form>
+                                    <div class="d-flex flex-column gap-2" style="min-width: 190px;">
+                                        <form method="POST" action="{{ route('hire-requests.accept', $hireRequest) }}" onsubmit="return confirm('Accept this hire request and create an order?');">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-success btn-sm w-100">Accept Request</button>
+                                        </form>
+
+                                        <form method="POST" action="{{ route('hire-requests.decline', $hireRequest) }}" onsubmit="return confirm('Decline this hire request?');">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input
+                                                type="text"
+                                                name="decline_reason"
+                                                class="form-control form-control-sm mb-2"
+                                                maxlength="1000"
+                                                placeholder="Optional decline reason"
+                                            >
+                                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">Decline Request</button>
+                                        </form>
+                                    </div>
                                 @elseif($hireRequest->order)
                                     <a href="{{ route('orders.show', $hireRequest->order) }}" class="btn btn-outline-primary btn-sm">Open Order</a>
+                                @elseif($hireRequest->status === 'declined')
+                                    <div class="small text-danger" style="min-width: 180px;">
+                                        <strong>Declined</strong>
+                                        @if($hireRequest->decline_reason)
+                                            <div class="text-muted mt-1">{{ $hireRequest->decline_reason }}</div>
+                                        @endif
+                                    </div>
                                 @else
                                     <span class="text-muted">No action</span>
                                 @endif

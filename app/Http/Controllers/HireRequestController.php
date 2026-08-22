@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Gig;
 use App\Models\HireRequest;
 use App\Models\Order;
+use App\Models\OrderStatusHistory;
 use App\Support\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -114,7 +115,7 @@ class HireRequestController extends Controller
             'You cannot accept another seller\'s hire request.'
         );
 
-        $order = DB::transaction(function () use ($hireRequest): Order {
+        $order = DB::transaction(function () use ($hireRequest, $seller): Order {
             $lockedRequest = HireRequest::query()
                 ->with('gig')
                 ->lockForUpdate()
@@ -140,10 +141,19 @@ class HireRequestController extends Controller
             $order->seller_id = $lockedRequest->seller_id;
             $order->buyer_id = $lockedRequest->buyer_id;
             $order->agreed_price = $lockedRequest->gig->price;
-            $order->status = 'in_progress';
+            $order->status = 'not_started';
             $order->due_date = $lockedRequest->proposed_deadline
                 ?? now()->addDays($lockedRequest->gig->delivery_time);
             $order->save();
+
+            OrderStatusHistory::query()->create([
+                'order_id' => $order->id,
+                'previous_status' => null,
+                'new_status' => 'not_started',
+                'changed_by_user_id' => $seller->id,
+                'note' => 'Order created from accepted hire request.',
+                'changed_at' => now(),
+            ]);
 
             $lockedRequest->update([
                 'status' => HireRequest::STATUS_ACCEPTED,
@@ -156,5 +166,54 @@ class HireRequestController extends Controller
         return redirect()
             ->route('orders.show', $order)
             ->with('success', 'Hire request accepted and order created successfully.');
+    }
+
+    /**
+     * Feature 4: decline a pending request with an optional reason.
+     */
+    public function decline(Request $request, HireRequest $hireRequest): RedirectResponse
+    {
+        $seller = CurrentUser::seller();
+
+        abort_unless(
+            (int) $hireRequest->seller_id === (int) $seller->id,
+            403,
+            'You cannot decline another seller\'s hire request.'
+        );
+
+        $validated = $request->validate([
+            'decline_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use ($hireRequest, $validated): void {
+            $lockedRequest = HireRequest::query()
+                ->lockForUpdate()
+                ->findOrFail($hireRequest->id);
+
+            abort_unless(
+                $lockedRequest->status === HireRequest::STATUS_PENDING,
+                422,
+                'Only pending hire requests can be declined.'
+            );
+
+            abort_if(
+                Order::query()->where('hire_request_id', $lockedRequest->id)->exists(),
+                422,
+                'A request that already created an order cannot be declined.'
+            );
+
+            $lockedRequest->update([
+                'status' => 'declined',
+            ]);
+
+            $lockedRequest->decline_reason = $validated['decline_reason'] ?? null;
+            $lockedRequest->declined_at = now();
+            $lockedRequest->accepted_at = null;
+            $lockedRequest->save();
+        });
+
+        return redirect()
+            ->route('hire-requests.incoming')
+            ->with('success', 'Hire request declined successfully.');
     }
 }

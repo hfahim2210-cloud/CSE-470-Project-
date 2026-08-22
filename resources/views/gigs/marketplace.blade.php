@@ -11,7 +11,10 @@
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Available Gigs</h1>
-        <a href="{{ route('gigs.index') }}" class="btn btn-outline-primary">My Dashboard</a>
+        <div>
+            <a href="{{ route('wishlist.index') }}" class="btn btn-outline-danger me-2">❤️ Wishlist</a>
+            <a href="{{ route('gigs.index') }}" class="btn btn-outline-primary">My Dashboard</a>
+        </div>
     </div>
 
     <!-- Search, Filter, Sort Form -->
@@ -60,8 +63,12 @@
                         <p class="mb-1"><strong>Price:</strong> ${{ number_format($gig->price, 2) }}</p>
                         <p class="mb-0"><small>Seller: <a href="{{ route('sellers.profile', $gig->user_id) }}">{{ $gig->user->name ?? 'Unknown' }}</a></small></p>
                     </div>
-                    <div class="card-footer bg-white border-top-0">
-                        <a href="{{ route('gigs.show', $gig->id) }}" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                    <div class="card-footer bg-white border-top-0 d-flex gap-2">
+                        <a href="{{ route('gigs.show', $gig->id) }}" class="btn btn-outline-primary btn-sm flex-grow-1">View Details</a>
+                        <form action="{{ route('wishlist.store', $gig->id) }}" method="POST" class="flex-shrink-0">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Save to Wishlist">❤️</button>
+                        </form>
                     </div>
                 </div>
             </div>

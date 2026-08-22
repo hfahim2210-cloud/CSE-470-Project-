@@ -37,4 +37,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Gig::class);
     }
+
+    // gigs this buyer has saved to their wishlist
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
 }

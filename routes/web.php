@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\DeliverableController;
 use App\Http\Controllers\HireRequestController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\WishlistController;
 
 // 1. Redirect root homepage to the Gigs seller management list
 Route::get('/', function () {
@@ -17,6 +18,11 @@ Route::get('/gigs/marketplace', [GigController::class, 'marketplace'])->name('gi
 
 // 3. Seller Profile View
 Route::get('/sellers/{user}', [GigController::class, 'sellerProfile'])->name('sellers.profile');
+
+// 3b. Wishlist (Kotha - Module 2)
+Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+Route::post('/wishlist/{gig}', [WishlistController::class, 'store'])->name('wishlist.store');
+Route::delete('/wishlist/{gig}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
 
 // 4. Submit and accept hire requests (Mahi - Module 3)
 Route::get('/gigs/{gig}/hire', [HireRequestController::class, 'create'])

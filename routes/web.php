@@ -7,6 +7,14 @@ use App\Http\Controllers\DeliverableController;
 use App\Http\Controllers\HireRequestController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\AuthController;
+
+// 0. Authentication (Login / Register)
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+Route::post('/register', [AuthController::class, 'register'])->name('register.attempt');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // 1. Redirect root homepage to the Gigs seller management list
 Route::get('/', function () {

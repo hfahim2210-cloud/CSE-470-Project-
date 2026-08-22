@@ -10,9 +10,16 @@
 <div class="container py-5" style="max-width: 950px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">&larr; All Orders</a>
-        <span class="badge bg-dark fs-6 text-uppercase">
-            {{ str_replace('_', ' ', $order->status) }}
-        </span>
+        <div class="d-flex align-items-center gap-2">
+            @if(!Auth::check() || Auth::id() === $order->seller_id)
+                <a href="{{ route('orders.status', $order) }}" class="btn btn-primary btn-sm">
+                    Update Order Status
+                </a>
+            @endif
+            <span class="badge bg-dark fs-6 text-uppercase">
+                {{ str_replace('_', ' ', $order->status) }}
+            </span>
+        </div>
     </div>
 
     @if(session('success'))

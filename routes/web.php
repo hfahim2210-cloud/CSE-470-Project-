@@ -31,6 +31,9 @@ Route::get('/seller/hire-requests', [HireRequestController::class, 'incoming'])
 Route::patch('/hire-requests/{hireRequest}/accept', [HireRequestController::class, 'accept'])
     ->name('hire-requests.accept');
 
+Route::patch('/hire-requests/{hireRequest}/decline', [HireRequestController::class, 'decline'])
+    ->name('hire-requests.decline');
+
 // 4. Resource route registers ALL Seller CRUD routes (index, create, store, show, edit, update, destroy)
 Route::resource('gigs', GigController::class);
 
@@ -43,6 +46,12 @@ Route::get('/orders', [OrderController::class, 'index'])
 
 Route::get('/orders/{order}', [OrderController::class, 'show'])
     ->name('orders.show');
+
+Route::get('/orders/{order}/status', [OrderController::class, 'status'])
+    ->name('orders.status');
+
+Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])
+    ->name('orders.status.update');
 
 // 6. Submit Final Deliverable
 Route::post('/orders/{order}/deliverable', [DeliverableController::class, 'store'])

@@ -6,8 +6,11 @@
     <title>Edit Gig - {{ $gig->title }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light py-5">
+    @include('partials.navigation')
+
     <div class="container" style="max-width: 700px;">
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
@@ -36,10 +39,16 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Category</label>
                             <select name="category" class="form-select" required>
-                                <option value="Graphics & Design" {{ $gig->category == 'Graphics & Design' ? 'selected' : '' }}>Graphics & Design</option>
-                                <option value="Web Development" {{ $gig->category == 'Web Development' ? 'selected' : '' }}>Web Development</option>
-                                <option value="Digital Marketing" {{ $gig->category == 'Digital Marketing' ? 'selected' : '' }}>Digital Marketing</option>
-                                <option value="Writing & Translation" {{ $gig->category == 'Writing & Translation' ? 'selected' : '' }}>Writing & Translation</option>
+                                <option value="Graphics & Design" {{ old('category', $gig->category) == 'Graphics & Design' ? 'selected' : '' }}>Graphics & Design</option>
+                                <option value="Programming & Tech" {{ old('category', $gig->category) == 'Programming & Tech' ? 'selected' : '' }}>Programming & Tech</option>
+                                <option value="Web Development" {{ old('category', $gig->category) == 'Web Development' ? 'selected' : '' }}>Web Development</option>
+                                <option value="Digital Marketing" {{ old('category', $gig->category) == 'Digital Marketing' ? 'selected' : '' }}>Digital Marketing</option>
+                                <option value="Writing & Translation" {{ old('category', $gig->category) == 'Writing & Translation' ? 'selected' : '' }}>Writing & Translation</option>
+                                <option value="Video & Animation" {{ old('category', $gig->category) == 'Video & Animation' ? 'selected' : '' }}>Video & Animation</option>
+                                <option value="Tutoring" {{ old('category', $gig->category) == 'Tutoring' ? 'selected' : '' }}>Tutoring</option>
+                                <option value="Creative" {{ old('category', $gig->category) == 'Creative' ? 'selected' : '' }}>Creative</option>
+                                <option value="Academics" {{ old('category', $gig->category) == 'Academics' ? 'selected' : '' }}>Academics</option>
+                                <option value="Tech" {{ old('category', $gig->category) == 'Tech' ? 'selected' : '' }}>Tech</option>
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
@@ -62,11 +71,24 @@
                         @if($gig->image)
                             <div class="mb-2">
                                 <p class="text-muted small mb-1">Current Image:</p>
-                                <img src="{{ Storage::url($gig->image) }}" class="rounded img-thumbnail" style="height: 100px; object-fit: cover;" alt="Current Cover">
+                                <img src="{{ route('media.show', ['path' => $gig->image]) }}" class="rounded img-thumbnail" style="height: 100px; object-fit: cover;" alt="Current Cover">
                             </div>
                         @endif
                         <input type="file" name="image" class="form-control" accept="image/*">
                         <small class="text-muted">Leave empty to keep current image.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="portfolio_files" class="form-label fw-bold">Add Portfolio Work Samples</label>
+                        <input
+                            type="file"
+                            name="portfolio_files[]"
+                            id="portfolio_files"
+                            class="form-control"
+                            multiple
+                            accept="image/*,.pdf"
+                        >
+                        <small class="text-muted">Optional. New images or PDFs are added to the existing portfolio.</small>
                     </div>
 
                     {{-- ⚡ Workload & Availability Settings Card --}}

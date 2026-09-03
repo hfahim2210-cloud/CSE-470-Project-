@@ -151,6 +151,7 @@
             color: #ffffff !important;
         }
     </style>
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body>
 
@@ -192,6 +193,16 @@
                             <i class="bi bi-briefcase-fill me-1"></i> Dashboard
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('hire-requests.incoming') ? 'active' : '' }}" href="{{ route('hire-requests.incoming') }}">
+                            <i class="bi bi-inbox-fill me-1"></i> Requests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('orders.*') ? 'active' : '' }}" href="{{ route('orders.index') }}">
+                            <i class="bi bi-box-seam-fill me-1"></i> Orders
+                        </a>
+                    </li>
                 </ul>
 
                 <!-- Right Actions & User Menu -->
@@ -213,6 +224,21 @@
                                     <i class="bi bi-collection-fill me-2" style="color: var(--accent-secondary);"></i> My Active Gigs
                                 </a>
                             </li>
+                            @auth
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item d-flex align-items-center">
+                                            <i class="bi bi-box-arrow-right me-2" style="color: var(--accent-secondary);"></i> Log Out
+                                        </button>
+                                    </form>
+                                </li>
+                            @else
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ route('login') }}">Log In</a></li>
+                                <li><a class="dropdown-item" href="{{ route('register') }}">Register</a></li>
+                            @endauth
                         </ul>
                     </div>
                 </div>

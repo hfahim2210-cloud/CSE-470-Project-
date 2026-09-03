@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Gig;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Support\CurrentUser;
@@ -17,7 +16,13 @@ class OrderController extends Controller
 {
     public function index(): View
     {
+        $userId = Auth::id();
+
         $orders = Order::with(['gig', 'seller', 'buyer', 'deliverable'])
+            ->where(function ($query) use ($userId): void {
+                $query->where('seller_id', $userId)
+                    ->orWhere('buyer_id', $userId);
+            })
             ->latest()
             ->get();
 
@@ -26,6 +31,12 @@ class OrderController extends Controller
 
     public function show(Order $order): View
     {
+        abort_unless(
+            in_array((int) Auth::id(), [(int) $order->seller_id, (int) $order->buyer_id], true),
+            403,
+            'You may view only your own orders.'
+        );
+
         $order->load(['gig', 'seller', 'buyer', 'deliverable', 'review', 'rating', 'revisionRequests']);
 
         return view('orders.show', compact('order'));
@@ -121,40 +132,4 @@ class OrderController extends Controller
         };
     }
 
-    /**
-     * TEMPORARY PLACEHOLDER.
-     * Remove this method when the teammate's "Accept Hire Request" feature
-     * creates real orders. It exists only so the deliverable features can
-     * be demonstrated independently before that module is merged.
-     */
-    public function createDemo(Gig $gig): RedirectResponse
-    {
-        // 🛡️ Automated Capacity & Availability Guard Check
-        if (!$gig->isAvailable()) {
-            if (!$gig->is_accepting_orders) {
-                return back()->with('error', 'This seller has temporarily paused orders (Exam Mode / Taking a break).');
-            }
-
-            return back()->with('error', 'This gig has reached its maximum order capacity for the week!');
-        }
-
-        $demoUserId = Auth::id() ?? $gig->user_id;
-
-        $order = Order::firstOrCreate(
-            [
-                'gig_id' => $gig->id,
-                'seller_id' => $gig->user_id,
-                'buyer_id' => $demoUserId,
-            ],
-            [
-                'agreed_price' => $gig->price,
-                'status' => 'in_progress',
-                'due_date' => now()->addDays($gig->delivery_time),
-            ]
-        );
-
-        return redirect()
-            ->route('orders.show', $order)
-            ->with('success', 'Temporary demo order is ready.');
-    }
 }

@@ -16,7 +16,7 @@ class GigController extends Controller
      */
     public function index()
     {
-        $userId = Auth::id() ?? 1;
+        $userId = Auth::id();
 
         // Active Gigs with eager-loaded active order counts to optimize performance
         $activeGigs = Gig::where('user_id', $userId)
@@ -43,9 +43,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $gig->update([
             'is_accepting_orders' => !$gig->is_accepting_orders
@@ -65,9 +63,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $gig->update(['status' => 'archived']);
 
@@ -81,9 +77,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $gig->update(['status' => 'active']);
 
@@ -166,7 +160,7 @@ class GigController extends Controller
             $validated['image'] = $request->file('image')->store('gigs', 'public');
         }
 
-        $validated['user_id'] = Auth::id() ?? 1;
+        $validated['user_id'] = Auth::id();
         $validated['status'] = 'active';
 
         $portfolioFiles = $request->file('portfolio_files');
@@ -207,6 +201,8 @@ class GigController extends Controller
     public function edit($id)
     {
         $gig = Gig::findOrFail($id);
+        $this->ensureSellerOwns($gig);
+
         return view('gigs.edit', compact('gig'));
     }
 
@@ -217,9 +213,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -272,9 +266,7 @@ class GigController extends Controller
             'orders.rating',
         ])->findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         if ($gig->image && Storage::disk('public')->exists($gig->image)) {
             Storage::disk('public')->delete($gig->image);
@@ -289,5 +281,16 @@ class GigController extends Controller
         $gig->delete();
 
         return redirect()->route('gigs.index')->with('success', 'Gig deleted permanently!');
+    }
+
+    private function ensureSellerOwns(Gig $gig): void
+    {
+        abort_unless(
+            Auth::check()
+                && Auth::user()->role === 'seller'
+                && (int) $gig->user_id === (int) Auth::id(),
+            403,
+            'You may manage only your own gigs.'
+        );
     }
 }

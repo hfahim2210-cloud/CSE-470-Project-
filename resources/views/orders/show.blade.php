@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order #{{ $order->id }} - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light">
+@include('partials.navigation')
+
 <div class="container py-5" style="max-width: 950px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">&larr; All Orders</a>
         <div class="d-flex align-items-center gap-2">
-            @if(!Auth::check() || Auth::id() === $order->seller_id)
+            @if(Auth::user()->role === 'seller' && (int) Auth::id() === (int) $order->seller_id)
                 <a href="{{ route('orders.status', $order) }}" class="btn btn-primary btn-sm">
                     Update Order Status
                 </a>
@@ -64,7 +67,7 @@
                 @if($order->deliverable->file_path)
                     <p>
                         <strong>File:</strong>
-                        <a href="{{ Storage::url($order->deliverable->file_path) }}" target="_blank">
+                        <a href="{{ route('media.show', ['path' => $order->deliverable->file_path]) }}" target="_blank">
                             {{ $order->deliverable->file_name ?? 'Open submitted file' }}
                         </a>
                     </p>
@@ -126,10 +129,12 @@
         </div>
     @endif
 
-    @if($order->status !== 'completed' && (!Auth::check() || Auth::id() === $order->seller_id))
+    @if($order->status !== 'completed'
+        && Auth::user()->role === 'seller'
+        && (int) Auth::id() === (int) $order->seller_id)
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-primary text-white py-3">
-                <h3 class="h5 mb-0">Feature 1 — Submit Final Deliverable</h3>
+                <h3 class="h5 mb-0">Submit Final Deliverable</h3>
             </div>
             <div class="card-body p-4">
                 <form action="{{ route('orders.deliverable.store', $order) }}" method="POST" enctype="multipart/form-data">
@@ -174,10 +179,11 @@
 
     @if($order->status === 'under_review'
         && $order->deliverable?->status === 'submitted'
-        && (!Auth::check() || Auth::id() === $order->buyer_id))
+        && Auth::user()->role === 'buyer'
+        && (int) Auth::id() === (int) $order->buyer_id)
         <div class="card shadow-sm border-success mb-4">
             <div class="card-header bg-success text-white py-3">
-                <h3 class="h5 mb-0">Feature 2 — Approve Final Deliverable</h3>
+                <h3 class="h5 mb-0">Approve Final Deliverable</h3>
             </div>
             <div class="card-body p-4">
                 <p>Review the submitted file or link above. Approval will mark this order as completed.</p>
@@ -195,10 +201,11 @@
 
     @if($order->status === 'under_review'
         && $order->deliverable?->status === 'submitted'
-        && (!Auth::check() || Auth::id() === $order->buyer_id))
+        && Auth::user()->role === 'buyer'
+        && (int) Auth::id() === (int) $order->buyer_id)
         <div class="card shadow-sm border-warning mb-4">
             <div class="card-header bg-warning py-3">
-                <h3 class="h5 mb-0">Feature 3 — Request Revisions</h3>
+                <h3 class="h5 mb-0">Request Revisions</h3>
             </div>
 
             <div class="card-body p-4">
@@ -245,7 +252,8 @@
     @endif
 
     @if($order->status === 'revision_requested'
-        && (!Auth::check() || Auth::id() === $order->seller_id))
+        && Auth::user()->role === 'seller'
+        && (int) Auth::id() === (int) $order->seller_id)
         <div class="alert alert-warning shadow-sm">
             <h4 class="alert-heading">Revision requested</h4>
             <p class="mb-0">
@@ -294,14 +302,14 @@
         @endif
 
         {{-- Only the buyer can leave/update feedback once the order is completed. --}}
-        @if(!Auth::check() || Auth::id() === $order->buyer_id)
+        @if(Auth::user()->role === 'buyer' && (int) Auth::id() === (int) $order->buyer_id)
             <div class="row g-4">
 
-                {{-- Feature 4: Leave Text Review --}}
+                {{-- Leave Text Review --}}
                 <div class="col-md-7">
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-header bg-primary text-white py-3">
-                            <h3 class="h5 mb-0">Feature 4 — Leave Text Review</h3>
+                            <h3 class="h5 mb-0">Leave Text Review</h3>
                         </div>
 
                         <div class="card-body p-4">
@@ -336,11 +344,11 @@
                     </div>
                 </div>
 
-                {{-- Feature 5: Leave Star Rating --}}
+                {{-- Leave Star Rating --}}
                 <div class="col-md-5">
                     <div class="card shadow-sm border-warning h-100">
                         <div class="card-header bg-warning py-3">
-                            <h3 class="h5 mb-0">Feature 5 — Leave Star Rating</h3>
+                            <h3 class="h5 mb-0">Leave Star Rating</h3>
                         </div>
 
                         <div class="card-body p-4">

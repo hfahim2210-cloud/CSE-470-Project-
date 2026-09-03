@@ -6,8 +6,11 @@
     <title>Create a New Gig</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light">
+
+@include('partials.navigation')
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -45,9 +48,14 @@
                                     <option value="" selected disabled>Select Category</option>
                                     <option value="Graphics & Design" {{ old('category') == 'Graphics & Design' ? 'selected' : '' }}>Graphics & Design</option>
                                     <option value="Programming & Tech" {{ old('category') == 'Programming & Tech' ? 'selected' : '' }}>Programming & Tech</option>
+                                    <option value="Web Development" {{ old('category') == 'Web Development' ? 'selected' : '' }}>Web Development</option>
                                     <option value="Digital Marketing" {{ old('category') == 'Digital Marketing' ? 'selected' : '' }}>Digital Marketing</option>
                                     <option value="Writing & Translation" {{ old('category') == 'Writing & Translation' ? 'selected' : '' }}>Writing & Translation</option>
                                     <option value="Video & Animation" {{ old('category') == 'Video & Animation' ? 'selected' : '' }}>Video & Animation</option>
+                                    <option value="Tutoring" {{ old('category') == 'Tutoring' ? 'selected' : '' }}>Tutoring</option>
+                                    <option value="Creative" {{ old('category') == 'Creative' ? 'selected' : '' }}>Creative</option>
+                                    <option value="Academics" {{ old('category') == 'Academics' ? 'selected' : '' }}>Academics</option>
+                                    <option value="Tech" {{ old('category') == 'Tech' ? 'selected' : '' }}>Tech</option>
                                 </select>
                             </div>
                             <div class="col-md-6">

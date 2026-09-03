@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orders - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light">
+@include('partials.navigation')
+
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">Orders</h2>
             <p class="text-muted mb-0">Submit and approve final deliverables here.</p>
         </div>
-        <a href="{{ route('gigs.index') }}" class="btn btn-outline-secondary">Back to Gigs</a>
+        <a href="{{ Auth::user()->role === 'seller' ? route('gigs.index') : route('gigs.marketplace') }}" class="btn btn-outline-secondary">
+            {{ Auth::user()->role === 'seller' ? 'Back to Dashboard' : 'Back to Marketplace' }}
+        </a>
     </div>
 
     @if(session('success'))
@@ -48,7 +53,7 @@
         @empty
             <div class="col-12">
                 <div class="alert alert-info">
-                    No orders exist yet. Open a gig and use the temporary “Create Demo Order” button.
+                    No orders exist yet. Accept a pending hire request to create the first order.
                 </div>
             </div>
         @endforelse

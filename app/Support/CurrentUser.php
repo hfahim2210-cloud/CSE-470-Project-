@@ -8,35 +8,25 @@ use Illuminate\Support\Facades\Auth;
 
 final class CurrentUser
 {
-    /**
-     * Temporary authentication fallback for Module 3 development.
-     * Real authentication automatically takes priority when it is available.
-     */
     public static function buyerFor(Gig $gig): User
     {
-        if (Auth::check() && Auth::id() !== $gig->user_id) {
-            return Auth::user();
-        }
-
-        return User::query()->firstOrCreate(
-            ['email' => 'buyer@example.com'],
-            [
-                'name' => 'Temporary Buyer',
-                'password' => 'temporary-password',
-            ]
+        abort_unless(
+            Auth::check() && Auth::user()->role === 'buyer',
+            403,
+            'Only a buyer account can submit a hire request.'
         );
+
+        return Auth::user();
     }
 
-    /**
-     * Uses the authenticated seller when available; otherwise follows the
-     * existing project convention of using the seeded seller with ID 1.
-     */
     public static function seller(): User
     {
-        if (Auth::check()) {
-            return Auth::user();
-        }
+        abort_unless(
+            Auth::check() && Auth::user()->role === 'seller',
+            403,
+            'Only a seller account can perform this action.'
+        );
 
-        return User::query()->findOrFail(1);
+        return Auth::user();
     }
 }

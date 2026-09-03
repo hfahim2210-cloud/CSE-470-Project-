@@ -6,8 +6,11 @@
     <title>{{ $gig->title }} - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light py-5">
+    @include('partials.navigation')
+
     <div class="container">
         {{-- Flash Messages --}}
         @if(session('success'))
@@ -24,7 +27,7 @@
             </div>
         @endif
 
-        <a href="{{ route('gigs.index') }}" class="btn btn-outline-secondary mb-4">&leftarrow; Back to All Gigs</a>
+        <a href="{{ route('gigs.marketplace') }}" class="btn btn-outline-secondary mb-4">&leftarrow; Back to Marketplace</a>
 
         <div class="row">
             {{-- Left Column: Gig Details & Media --}}
@@ -32,7 +35,7 @@
                 <div class="card shadow-sm border-0 overflow-hidden">
                     {{-- Uploaded Cover Image Display --}}
                     @if($gig->image)
-                        <img src="{{ Storage::url($gig->image) }}" class="card-img-top" alt="{{ $gig->title }}" style="max-height: 420px; object-fit: cover;">
+                        <img src="{{ route('media.show', ['path' => $gig->image]) }}" class="card-img-top" alt="{{ $gig->title }}" style="max-height: 420px; object-fit: cover;">
                     @else
                         <div class="bg-secondary text-white text-center py-5">
                             <p class="mb-0 fs-5">📷 No Cover Image Uploaded</p>
@@ -67,11 +70,11 @@
                                             @if(Str::endsWith($item->file_path, ['.pdf']))
                                                 <div class="card-body text-center d-flex flex-column justify-content-center bg-light rounded">
                                                     <p class="fs-1 mb-1">📄</p>
-                                                    <a href="{{ Storage::url($item->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">View PDF Sample</a>
+                                                    <a href="{{ route('media.show', ['path' => $item->file_path]) }}" target="_blank" class="btn btn-sm btn-outline-primary">View PDF Sample</a>
                                                 </div>
                                             @else
-                                                <a href="{{ Storage::url($item->file_path) }}" target="_blank">
-                                                    <img src="{{ Storage::url($item->file_path) }}" class="img-fluid rounded" style="height: 140px; width: 100%; object-fit: cover;" alt="Portfolio Sample">
+                                                <a href="{{ route('media.show', ['path' => $item->file_path]) }}" target="_blank">
+                                                    <img src="{{ route('media.show', ['path' => $item->file_path]) }}" class="img-fluid rounded" style="height: 140px; width: 100%; object-fit: cover;" alt="Portfolio Sample">
                                                 </a>
                                             @endif
                                         </div>
@@ -100,10 +103,40 @@
 
                         <hr>
 
-                        {{-- ⚡ Dynamic Hire Button / Capacity State Logic --}}
+                        @php
+                            $viewerOrder = Auth::check()
+                                ? $gig->orders->first(fn ($order) =>
+                                    (int) $order->buyer_id === (int) Auth::id()
+                                    || (int) $order->seller_id === (int) Auth::id()
+                                )
+                                : null;
+                        @endphp
+
+                        {{-- Dynamic action based on guest, buyer and seller permissions. --}}
                         <div class="mb-3">
-                            @if($gig->orders->isNotEmpty())
-                                <a href="{{ route('orders.show', $gig->orders->first()) }}" class="btn btn-success btn-lg w-100 mb-2">
+                            @if(!Auth::check())
+                                <a href="{{ route('login') }}" class="btn btn-success btn-lg w-100 mb-2">
+                                    Log In to Hire
+                                </a>
+                                <div class="text-center">
+                                    <small class="text-muted">Guests may browse gigs. A buyer account is required to hire.</small>
+                                </div>
+                            @elseif(Auth::user()->role === 'seller' && (int) Auth::id() === (int) $gig->user_id)
+                                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                    <i class="bi bi-person-x-fill me-1"></i> This Is Your Own Gig
+                                </button>
+                                <div class="text-center">
+                                    <small class="text-muted">Sellers cannot submit hire requests for their own gigs.</small>
+                                </div>
+                            @elseif(Auth::user()->role === 'seller')
+                                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                    Buyer Account Required
+                                </button>
+                                <div class="text-center">
+                                    <small class="text-muted">Seller accounts cannot submit hire requests.</small>
+                                </div>
+                            @elseif($viewerOrder)
+                                <a href="{{ route('orders.show', $viewerOrder) }}" class="btn btn-success btn-lg w-100 mb-2">
                                     Open Order & Deliverable
                                 </a>
                             @elseif($gig->isAvailable())
@@ -139,29 +172,32 @@
                             @endif
                         </div>
 
-                        <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-success w-100 mb-2">
-                            Review Hire Requests
-                        </a>
-
-                        <a href="{{ route('orders.index') }}" class="btn btn-outline-primary w-100 mb-4">View All Orders</a>
-
-                        {{-- Seller Actions: Edit & Delete --}}
-                        <div class="border-top pt-3">
-                            <h6 class="fw-bold text-muted mb-3">Manage Listing</h6>
-                            <div class="d-grid gap-2">
-                                <a href="{{ route('gigs.edit', $gig->id) }}" class="btn btn-warning">
-                                    ✏️ Edit Gig
+                        @auth
+                            @if(Auth::user()->role === 'seller' && (int) Auth::id() === (int) $gig->user_id)
+                                <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-success w-100 mb-2">
+                                    Review Hire Requests
                                 </a>
 
-                                <form action="{{ route('gigs.destroy', $gig->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this gig? This action will permanently remove all files and cannot be undone.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-outline-danger w-100">
-                                        🗑️ Delete Gig
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                                <a href="{{ route('orders.index') }}" class="btn btn-outline-primary w-100 mb-4">View All Orders</a>
+
+                                <div class="border-top pt-3">
+                                    <h6 class="fw-bold text-muted mb-3">Manage Listing</h6>
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ route('gigs.edit', $gig->id) }}" class="btn btn-warning">
+                                            ✏️ Edit Gig
+                                        </a>
+
+                                        <form action="{{ route('gigs.destroy', $gig->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this gig? This action will permanently remove all files and cannot be undone.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-outline-danger w-100">
+                                                🗑️ Delete Gig
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endif
+                        @endauth
 
                     </div>
                 </div>

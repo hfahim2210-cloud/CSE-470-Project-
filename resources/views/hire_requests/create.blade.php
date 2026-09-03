@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit Hire Request - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light py-5">
+@include('partials.navigation')
+
 <div class="container" style="max-width: 760px;">
     <a href="{{ route('gigs.show', $gig) }}" class="btn btn-outline-secondary mb-4">
         &larr; Back to Gig

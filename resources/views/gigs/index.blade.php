@@ -11,6 +11,10 @@
         <p class="text-muted mb-0">Manage, archive, and monitor your active listings.</p>
     </div>
     <div class="d-flex gap-2">
+        <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-primary d-flex align-items-center">
+            <i class="bi bi-inbox-fill me-1"></i> Hire Requests
+        </a>
+
         <a href="{{ route('orders.index') }}" class="btn btn-outline-success d-flex align-items-center">
             <i class="bi bi-box-seam me-1"></i> View Orders
         </a>
@@ -45,7 +49,7 @@
                 <div class="col-md-4 mb-4">
                     <div class="card h-100 shadow-sm border-0">
                         @if($gig->image)
-                            <img src="{{ asset('storage/' . $gig->image) }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ $gig->title }}">
+                            <img src="{{ route('media.show', ['path' => $gig->image]) }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ $gig->title }}">
                         @else
                             <div class="bg-secondary text-white text-center py-5">No Cover Image</div>
                         @endif
@@ -119,7 +123,7 @@
                 <div class="col-md-4 mb-4">
                     <div class="card h-100 shadow-sm border-0 opacity-75">
                         @if($gig->image)
-                            <img src="{{ asset('storage/' . $gig->image) }}" class="card-img-top" style="height: 180px; object-fit: cover; filter: grayscale(50%);" alt="{{ $gig->title }}">
+                            <img src="{{ route('media.show', ['path' => $gig->image]) }}" class="card-img-top" style="height: 180px; object-fit: cover; filter: grayscale(50%);" alt="{{ $gig->title }}">
                         @else
                             <div class="bg-secondary text-white text-center py-5">No Cover Image</div>
                         @endif

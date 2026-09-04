@@ -93,10 +93,12 @@
             background-color: var(--card-bg) !important;
             border: 1px solid var(--border-color) !important;
             border-radius: 10px;
+            min-width: 220px;
         }
 
         .dropdown-menu-dark-custom .dropdown-item {
             color: #ffffff !important;
+            padding: 8px 16px;
         }
 
         .dropdown-menu-dark-custom .dropdown-item:hover {
@@ -202,18 +204,46 @@
                     </a>
 
                     <!-- Profile Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-light btn-sm rounded-circle p-1 ms-2" type="button" data-bs-toggle="dropdown" style="border-color: var(--border-color);">
-                            <i class="bi bi-person-circle fs-5" style="color: var(--accent-secondary);"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark-custom shadow border-0 mt-2">
-                            <li><h6 class="dropdown-header">Logged in as Student</h6></li>
-                            <li>
-                                <a class="dropdown-item d-flex align-items-center" href="{{ route('gigs.index') }}">
-                                    <i class="bi bi-collection-fill me-2" style="color: var(--accent-secondary);"></i> My Active Gigs
-                                </a>
-                            </li>
-                        </ul>
+                    <div class="dropdown ms-2">
+                        @auth
+                            <button class="btn btn-outline-light btn-sm rounded-pill px-2 py-1 d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" style="border-color: var(--border-color);">
+                                <i class="bi bi-person-circle fs-5" style="color: var(--accent-secondary);"></i>
+                                <span class="d-none d-md-inline text-white fw-semibold small">{{ Auth::user()->name }}</span>
+                                <i class="bi bi-chevron-down small text-muted"></i>
+                            </button>
+
+                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark-custom shadow border-0 mt-2">
+                                <!-- Dynamic User Name & Role Header -->
+                                <li class="px-3 py-2 border-bottom border-secondary border-opacity-25 mb-1">
+                                    <div class="fw-bold text-white mb-0">{{ Auth::user()->name }}</div>
+                                    <small class="text-capitalize" style="color: var(--accent-secondary);">
+                                        Role: {{ Auth::user()->role ?? 'Student' }}
+                                    </small>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="{{ route('gigs.index') }}">
+                                        <i class="bi bi-collection-fill me-2" style="color: var(--accent-secondary);"></i> My Active Gigs
+                                    </a>
+                                </li>
+
+                                <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+
+                                <!-- Secure Logout Form -->
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item d-flex align-items-center text-danger w-100 bg-transparent border-0">
+                                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        @else
+                            <!-- Guest Links (If not logged in) -->
+                            <a href="{{ route('login') }}" class="btn btn-sm btn-outline-light me-1">Log In</a>
+                            <a href="{{ route('register') }}" class="btn btn-sm btn-brand">Sign Up</a>
+                        @endauth
                     </div>
                 </div>
 

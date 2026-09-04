@@ -67,4 +67,14 @@ class Gig extends Model
 
         return $this->activeOrdersCount() < $this->max_weekly_orders;
     }
+
+    public function tiers()
+    {
+       return $this->hasMany(GigTier::class);
+    }
+
+    public function addons()
+    {
+      return $this->hasMany(GigAddon::class);
+    }
 }

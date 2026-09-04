@@ -36,10 +36,10 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Category</label>
                             <select name="category" class="form-select" required>
-                                <option value="Graphics & Design" {{ $gig->category == 'Graphics & Design' ? 'selected' : '' }}>Graphics & Design</option>
-                                <option value="Web Development" {{ $gig->category == 'Web Development' ? 'selected' : '' }}>Web Development</option>
-                                <option value="Digital Marketing" {{ $gig->category == 'Digital Marketing' ? 'selected' : '' }}>Digital Marketing</option>
-                                <option value="Writing & Translation" {{ $gig->category == 'Writing & Translation' ? 'selected' : '' }}>Writing & Translation</option>
+                                <option value="Graphics & Design" {{ old('category', $gig->category) == 'Graphics & Design' ? 'selected' : '' }}>Graphics & Design</option>
+                                <option value="Web Development" {{ old('category', $gig->category) == 'Web Development' ? 'selected' : '' }}>Web Development</option>
+                                <option value="Digital Marketing" {{ old('category', $gig->category) == 'Digital Marketing' ? 'selected' : '' }}>Digital Marketing</option>
+                                <option value="Writing & Translation" {{ old('category', $gig->category) == 'Writing & Translation' ? 'selected' : '' }}>Writing & Translation</option>
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
@@ -95,6 +95,8 @@
                             {{-- Exam Mode / Pause Orders Switch --}}
                             <div class="col-md-6">
                                 <div class="form-check form-switch pt-2">
+                                    {{-- Hidden field ensures a '0' value is submitted when checkbox is unchecked --}}
+                                    <input type="hidden" name="is_accepting_orders" value="0">
                                     <input class="form-check-input" 
                                            type="checkbox" 
                                            name="is_accepting_orders" 

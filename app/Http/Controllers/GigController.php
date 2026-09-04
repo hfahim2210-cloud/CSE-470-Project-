@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Gig;
 use App\Models\User;
+use App\Models\GigTier;
+use App\Models\GigAddon;
 use App\Models\PortfolioItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class GigController extends Controller
@@ -18,7 +21,7 @@ class GigController extends Controller
     {
         $userId = Auth::id() ?? 1;
 
-        // Active Gigs with eager-loaded active order counts to optimize performance
+        // Active Gigs with eager-loaded active order counts
         $activeGigs = Gig::where('user_id', $userId)
             ->where('status', '!=', 'archived')
             ->withCount(['orders as active_orders_count' => function ($query) {
@@ -95,7 +98,7 @@ class GigController extends Controller
      */
     public function marketplace(Request $request)
     {
-        $query = Gig::where('status', '!=', 'archived');
+        $query = Gig::where('status', '!=', 'archived')->with('tiers');
 
         // Search by keyword
         if ($request->filled('search')) {
@@ -144,7 +147,7 @@ class GigController extends Controller
     }
 
     /**
-     * Store a newly created gig and its portfolio items in storage.
+     * Store a newly created gig along with tiers, addons, and portfolio items.
      */
     public function store(Request $request)
     {
@@ -158,46 +161,90 @@ class GigController extends Controller
             'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+
+            // Service Tiers validation
+            'tiers' => 'nullable|array',
+            'tiers.*.tier_type' => 'required_with:tiers|in:basic,standard,premium',
+            'tiers.*.title' => 'required_with:tiers|string|max:255',
+            'tiers.*.description' => 'required_with:tiers|string',
+            'tiers.*.price' => 'required_with:tiers|numeric|min:0',
+            'tiers.*.delivery_days' => 'required_with:tiers|integer|min:1',
+            'tiers.*.revisions' => 'required_with:tiers|integer|min:0',
+
+            // Add-ons validation
+            'addons' => 'nullable|array',
+            'addons.*.title' => 'required_with:addons|string|max:255',
+            'addons.*.price' => 'required_with:addons|numeric|min:0',
+            'addons.*.extra_delivery_days' => 'nullable|integer',
         ]);
 
         $validated['is_accepting_orders'] = $request->has('is_accepting_orders');
-
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('gigs', 'public');
-        }
-
         $validated['user_id'] = Auth::id() ?? 1;
         $validated['status'] = 'active';
 
+        // Extract files and relationship data out of $validated array
         $portfolioFiles = $request->file('portfolio_files');
-        unset($validated['portfolio_files']);
+        $tiersData = $validated['tiers'] ?? [];
+        $addonsData = $validated['addons'] ?? [];
 
-        $gig = Gig::create($validated);
+        unset($validated['portfolio_files'], $validated['tiers'], $validated['addons']);
 
-        if ($portfolioFiles) {
-            foreach ($portfolioFiles as $file) {
-                $filePath = $file->store('portfolio', 'public');
-                $gig->portfolioItems()->create([
-                    'file_path' => $filePath,
-                    'file_type' => $file->getClientOriginalExtension(),
-                ]);
+        DB::transaction(function () use ($request, $validated, $portfolioFiles, $tiersData, $addonsData) {
+            // 1. Upload main gig thumbnail
+            if ($request->hasFile('image')) {
+                $validated['image'] = $request->file('image')->store('gigs', 'public');
             }
-        }
+
+            // 2. Create Base Gig
+            $gig = Gig::create($validated);
+
+            // 3. Save Tiers if provided
+            foreach ($tiersData as $tier) {
+                if (!empty($tier['title'])) {
+                    $gig->tiers()->create($tier);
+                }
+            }
+
+            // 4. Save Add-ons if provided
+            foreach ($addonsData as $addon) {
+                if (!empty($addon['title'])) {
+                    $gig->addons()->create([
+                        'title' => $addon['title'],
+                        'price' => $addon['price'],
+                        'extra_delivery_days' => $addon['extra_delivery_days'] ?? 0,
+                    ]);
+                }
+            }
+
+            // 5. Upload & Save Portfolio Items
+            if ($portfolioFiles) {
+                foreach ($portfolioFiles as $file) {
+                    $filePath = $file->store('portfolio', 'public');
+                    $gig->portfolioItems()->create([
+                        'file_path' => $filePath,
+                        'file_type' => $file->getClientOriginalExtension(),
+                    ]);
+                }
+            }
+        });
 
         return redirect()->route('gigs.index')->with('success', 'Gig created successfully!');
     }
 
     /**
-     * Display the specified gig with its portfolio items.
+     * Display the specified gig with its portfolio items, tiers, and add-ons.
      */
     public function show($id)
     {
         $gig = Gig::with([
+            'tiers',
+            'addons',
             'portfolioItems',
             'orders.buyer',
             'orders.review',
             'orders.rating',
         ])->findOrFail($id);
+
         return view('gigs.show', compact('gig'));
     }
 
@@ -206,7 +253,12 @@ class GigController extends Controller
      */
     public function edit($id)
     {
-        $gig = Gig::findOrFail($id);
+        $gig = Gig::with(['tiers', 'addons'])->findOrFail($id);
+
+        if ($gig->user_id !== (Auth::id() ?? 1)) {
+            abort(403, 'Unauthorized action.');
+        }
+
         return view('gigs.edit', compact('gig'));
     }
 
@@ -231,31 +283,78 @@ class GigController extends Controller
             'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+
+            // Service Tiers validation
+            'tiers' => 'nullable|array',
+            'tiers.*.tier_type' => 'required_with:tiers|in:basic,standard,premium',
+            'tiers.*.title' => 'required_with:tiers|string|max:255',
+            'tiers.*.description' => 'required_with:tiers|string',
+            'tiers.*.price' => 'required_with:tiers|numeric|min:0',
+            'tiers.*.delivery_days' => 'required_with:tiers|integer|min:1',
+            'tiers.*.revisions' => 'required_with:tiers|integer|min:0',
+
+            // Add-ons validation
+            'addons' => 'nullable|array',
+            'addons.*.title' => 'required_with:addons|string|max:255',
+            'addons.*.price' => 'required_with:addons|numeric|min:0',
+            'addons.*.extra_delivery_days' => 'nullable|integer',
         ]);
 
         $validated['is_accepting_orders'] = $request->has('is_accepting_orders');
 
-        if ($request->hasFile('image')) {
-            if ($gig->image && Storage::disk('public')->exists($gig->image)) {
-                Storage::disk('public')->delete($gig->image);
-            }
-            $validated['image'] = $request->file('image')->store('gigs', 'public');
-        }
-
         $portfolioFiles = $request->file('portfolio_files');
-        unset($validated['portfolio_files']);
+        $tiersData = $validated['tiers'] ?? [];
+        $addonsData = $validated['addons'] ?? [];
 
-        $gig->update($validated);
+        unset($validated['portfolio_files'], $validated['tiers'], $validated['addons']);
 
-        if ($portfolioFiles) {
-            foreach ($portfolioFiles as $file) {
-                $filePath = $file->store('portfolio', 'public');
-                $gig->portfolioItems()->create([
-                    'file_path' => $filePath,
-                    'file_type' => $file->getClientOriginalExtension(),
-                ]);
+        DB::transaction(function () use ($gig, $request, $validated, $portfolioFiles, $tiersData, $addonsData) {
+            // Handle image replacement
+            if ($request->hasFile('image')) {
+                if ($gig->image && Storage::disk('public')->exists($gig->image)) {
+                    Storage::disk('public')->delete($gig->image);
+                }
+                $validated['image'] = $request->file('image')->store('gigs', 'public');
             }
-        }
+
+            // Update main gig fields
+            $gig->update($validated);
+
+            // Update or recreate tiers
+            if (!empty($tiersData)) {
+                $gig->tiers()->delete(); // Clear old tiers
+                foreach ($tiersData as $tier) {
+                    if (!empty($tier['title'])) {
+                        $gig->tiers()->create($tier);
+                    }
+                }
+            }
+
+            // Update or recreate add-ons
+            if (!empty($addonsData)) {
+                $gig->addons()->delete(); // Clear old addons
+                foreach ($addonsData as $addon) {
+                    if (!empty($addon['title'])) {
+                        $gig->addons()->create([
+                            'title' => $addon['title'],
+                            'price' => $addon['price'],
+                            'extra_delivery_days' => $addon['extra_delivery_days'] ?? 0,
+                        ]);
+                    }
+                }
+            }
+
+            // Upload additional portfolio items
+            if ($portfolioFiles) {
+                foreach ($portfolioFiles as $file) {
+                    $filePath = $file->store('portfolio', 'public');
+                    $gig->portfolioItems()->create([
+                        'file_path' => $filePath,
+                        'file_type' => $file->getClientOriginalExtension(),
+                    ]);
+                }
+            }
+        });
 
         return redirect()->route('gigs.show', $gig->id)->with('success', 'Gig updated successfully!');
     }

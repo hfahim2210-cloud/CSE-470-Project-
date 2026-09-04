@@ -27,9 +27,9 @@
         <a href="{{ route('gigs.index') }}" class="btn btn-outline-secondary mb-4">&leftarrow; Back to All Gigs</a>
 
         <div class="row">
-            {{-- Left Column: Gig Details & Media --}}
+            {{-- Left Column: Gig Details, Pricing Tiers, Add-ons & Media --}}
             <div class="col-lg-8 mb-4">
-                <div class="card shadow-sm border-0 overflow-hidden">
+                <div class="card shadow-sm border-0 overflow-hidden mb-4">
                     {{-- Uploaded Cover Image Display --}}
                     @if($gig->image)
                         <img src="{{ Storage::url($gig->image) }}" class="card-img-top" alt="{{ $gig->title }}" style="max-height: 420px; object-fit: cover;">
@@ -55,6 +55,67 @@
 
                         <h5 class="fw-bold">About This Gig</h5>
                         <p class="card-text text-secondary mb-4" style="white-space: pre-line; line-height: 1.7;">{{ $gig->description }}</p>
+
+                        {{-- 📦 Service Packages & Pricing Tiers --}}
+                        @if($gig->tiers && $gig->tiers->count() > 0)
+                            <hr class="my-4">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-layers text-primary me-2"></i>Select a Service Package</h5>
+                            
+                            {{-- Package Selector Tabs --}}
+                            <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+                                @foreach($gig->tiers as $index => $tier)
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link {{ $index === 0 ? 'active fw-bold' : '' }} text-capitalize" 
+                                                id="pills-{{ $tier->tier_type }}-tab" 
+                                                data-bs-toggle="pill" 
+                                                data-bs-target="#pills-{{ $tier->tier_type }}" 
+                                                type="button" 
+                                                role="tab">
+                                            {{ $tier->tier_type }} (${{ number_format($tier->price, 2) }})
+                                        </button>
+                                    </li>
+                                @endforeach
+                            </ul>
+
+                            {{-- Tab Contents --}}
+                            <div class="tab-content border rounded p-3 bg-light" id="pills-tabContent">
+                                @foreach($gig->tiers as $index => $tier)
+                                    <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}" id="pills-{{ $tier->tier_type }}" role="tabpanel">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="fw-bold mb-0">{{ $tier->title }}</h6>
+                                            <span class="fs-4 fw-bold text-success">${{ number_format($tier->price, 2) }}</span>
+                                        </div>
+                                        <p class="text-muted small mb-3">{{ $tier->description }}</p>
+                                        
+                                        <div class="d-flex gap-4 text-secondary small border-top pt-2">
+                                            <div><i class="bi bi-clock me-1"></i><strong>{{ $tier->delivery_days }}</strong> {{ Str::plural('Day', $tier->delivery_days) }} Delivery</div>
+                                            <div><i class="bi bi-arrow-repeat me-1"></i><strong>{{ $tier->revisions }}</strong> {{ Str::plural('Revision', $tier->revisions) }}</div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        {{-- ⚡ Extra Paid Add-ons --}}
+                        @if($gig->addons && $gig->addons->count() > 0)
+                            <hr class="my-4">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle-fill text-primary me-2"></i>Available Optional Add-ons</h5>
+                            <div class="list-group">
+                                @foreach($gig->addons as $addon)
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <div>
+                                            <h6 class="mb-1 fw-bold">{{ $addon->title }}</h6>
+                                            @if($addon->extra_delivery_days > 0)
+                                                <small class="text-muted">Adds +{{ $addon->extra_delivery_days }} {{ Str::plural('day', $addon->extra_delivery_days) }} to delivery time</small>
+                                            @else
+                                                <small class="text-muted">No extra delivery time required</small>
+                                            @endif
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill fs-6">+${{ number_format($addon->price, 2) }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
 
                         {{-- Portfolio Work Samples --}}
                         @if($gig->portfolioItems && $gig->portfolioItems->count() > 0)
@@ -84,17 +145,17 @@
                 </div>
             </div>
 
-            {{-- Right Column: Pricing, Capacity Check, Order Action, & Seller Controls --}}
+            {{-- Right Column: Pricing Summary, Capacity Check, Order Action, & Seller Controls --}}
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted">Price</span>
+                            <span class="text-muted">Starting Base Price</span>
                             <span class="fs-2 fw-bold text-success">${{ number_format($gig->price, 2) }}</span>
                         </div>
 
                         <div class="mb-3">
-                            <strong>⏱️ Delivery Time:</strong>
+                            <strong>⏱️ Base Delivery Time:</strong>
                             <span>{{ $gig->delivery_time }} {{ Str::plural('Day', $gig->delivery_time) }}</span>
                         </div>
 

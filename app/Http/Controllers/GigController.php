@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Gig;
+use App\Models\Order;
 use App\Models\User;
-use App\Models\GigTier;
-use App\Models\GigAddon;
-use App\Models\PortfolioItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GigController extends Controller
 {
@@ -19,13 +18,13 @@ class GigController extends Controller
      */
     public function index()
     {
-        $userId = Auth::id() ?? 1;
+        $userId = Auth::id();
 
-        // Active Gigs with eager-loaded active order counts
+        // Active Gigs with eager-loaded active order counts to optimize performance
         $activeGigs = Gig::where('user_id', $userId)
             ->where('status', '!=', 'archived')
             ->withCount(['orders as active_orders_count' => function ($query) {
-                $query->whereIn('status', ['pending', 'in_progress']);
+                $query->whereIn('status', ['not_started', 'in_progress', 'under_review', 'revision_requested']);
             }])
             ->latest()
             ->get();
@@ -36,7 +35,55 @@ class GigController extends Controller
             ->latest()
             ->get();
 
-        return view('gigs.index', compact('activeGigs', 'archivedGigs'));
+        $sellerOrders = Order::query()->where('seller_id', $userId);
+        $totalOrders = (clone $sellerOrders)->count();
+        $activeOrders = (clone $sellerOrders)
+            ->whereIn('status', ['not_started', 'in_progress', 'under_review', 'revision_requested'])
+            ->count();
+        $completedOrders = (clone $sellerOrders)->where('status', 'completed')->count();
+        $completionRate = $totalOrders > 0
+            ? round(($completedOrders / $totalOrders) * 100, 1)
+            : 0;
+        $totalEarnings = (float) (clone $sellerOrders)
+            ->where('status', 'completed')
+            ->sum('agreed_price');
+        $monthlyEarnings = (float) (clone $sellerOrders)
+            ->where('status', 'completed')
+            ->whereBetween('completed_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('agreed_price');
+
+        $monthlyBreakdown = collect(range(5, 0))->map(function (int $monthsBack) use ($sellerOrders): array {
+            $month = now()->subMonthsNoOverflow($monthsBack);
+            $monthOrders = (clone $sellerOrders)
+                ->where('status', 'completed')
+                ->whereBetween('completed_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()]);
+
+            return [
+                'label' => $month->format('M Y'),
+                'orders' => (clone $monthOrders)->count(),
+                'earnings' => (float) $monthOrders->sum('agreed_price'),
+            ];
+        });
+
+        $recentCompletedOrders = (clone $sellerOrders)
+            ->with(['gig', 'buyer'])
+            ->where('status', 'completed')
+            ->latest('completed_at')
+            ->limit(5)
+            ->get();
+
+        return view('gigs.index', compact(
+            'activeGigs',
+            'archivedGigs',
+            'totalOrders',
+            'activeOrders',
+            'completedOrders',
+            'completionRate',
+            'totalEarnings',
+            'monthlyEarnings',
+            'monthlyBreakdown',
+            'recentCompletedOrders'
+        ));
     }
 
     /**
@@ -46,9 +93,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $gig->update([
             'is_accepting_orders' => !$gig->is_accepting_orders
@@ -68,9 +113,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $gig->update(['status' => 'archived']);
 
@@ -84,9 +127,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $gig->update(['status' => 'active']);
 
@@ -98,7 +139,7 @@ class GigController extends Controller
      */
     public function marketplace(Request $request)
     {
-        $query = Gig::where('status', '!=', 'archived')->with('tiers');
+        $query = Gig::where('status', '!=', 'archived');
 
         // Search by keyword
         if ($request->filled('search')) {
@@ -147,7 +188,7 @@ class GigController extends Controller
     }
 
     /**
-     * Store a newly created gig along with tiers, addons, and portfolio items.
+     * Store a newly created gig and its portfolio items in storage.
      */
     public function store(Request $request)
     {
@@ -161,90 +202,54 @@ class GigController extends Controller
             'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
-
-            // Service Tiers validation
             'tiers' => 'nullable|array',
-            'tiers.*.tier_type' => 'required_with:tiers|in:basic,standard,premium',
-            'tiers.*.title' => 'required_with:tiers|string|max:255',
-            'tiers.*.description' => 'required_with:tiers|string',
-            'tiers.*.price' => 'required_with:tiers|numeric|min:0',
-            'tiers.*.delivery_days' => 'required_with:tiers|integer|min:1',
-            'tiers.*.revisions' => 'required_with:tiers|integer|min:0',
-
-            // Add-ons validation
-            'addons' => 'nullable|array',
-            'addons.*.title' => 'required_with:addons|string|max:255',
-            'addons.*.price' => 'required_with:addons|numeric|min:0',
-            'addons.*.extra_delivery_days' => 'nullable|integer',
+            'addons' => 'nullable|array|max:10',
         ]);
 
+        $serviceOptions = $this->validatedServiceOptions($validated);
+
         $validated['is_accepting_orders'] = $request->has('is_accepting_orders');
-        $validated['user_id'] = Auth::id() ?? 1;
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('gigs', 'public');
+        }
+
+        $validated['user_id'] = Auth::id();
         $validated['status'] = 'active';
 
-        // Extract files and relationship data out of $validated array
         $portfolioFiles = $request->file('portfolio_files');
-        $tiersData = $validated['tiers'] ?? [];
-        $addonsData = $validated['addons'] ?? [];
-
         unset($validated['portfolio_files'], $validated['tiers'], $validated['addons']);
 
-        DB::transaction(function () use ($request, $validated, $portfolioFiles, $tiersData, $addonsData) {
-            // 1. Upload main gig thumbnail
-            if ($request->hasFile('image')) {
-                $validated['image'] = $request->file('image')->store('gigs', 'public');
-            }
+        $gig = Gig::create($validated);
 
-            // 2. Create Base Gig
-            $gig = Gig::create($validated);
-
-            // 3. Save Tiers if provided
-            foreach ($tiersData as $tier) {
-                if (!empty($tier['title'])) {
-                    $gig->tiers()->create($tier);
-                }
+        if ($portfolioFiles) {
+            foreach ($portfolioFiles as $file) {
+                $filePath = $file->store('portfolio', 'public');
+                $gig->portfolioItems()->create([
+                    'file_path' => $filePath,
+                    'file_type' => $file->getClientOriginalExtension(),
+                ]);
             }
+        }
 
-            // 4. Save Add-ons if provided
-            foreach ($addonsData as $addon) {
-                if (!empty($addon['title'])) {
-                    $gig->addons()->create([
-                        'title' => $addon['title'],
-                        'price' => $addon['price'],
-                        'extra_delivery_days' => $addon['extra_delivery_days'] ?? 0,
-                    ]);
-                }
-            }
-
-            // 5. Upload & Save Portfolio Items
-            if ($portfolioFiles) {
-                foreach ($portfolioFiles as $file) {
-                    $filePath = $file->store('portfolio', 'public');
-                    $gig->portfolioItems()->create([
-                        'file_path' => $filePath,
-                        'file_type' => $file->getClientOriginalExtension(),
-                    ]);
-                }
-            }
-        });
+        $this->syncServiceOptions($gig, $serviceOptions);
 
         return redirect()->route('gigs.index')->with('success', 'Gig created successfully!');
     }
 
     /**
-     * Display the specified gig with its portfolio items, tiers, and add-ons.
+     * Display the specified gig with its portfolio items.
      */
     public function show($id)
     {
         $gig = Gig::with([
+            'portfolioItems',
             'tiers',
             'addons',
-            'portfolioItems',
             'orders.buyer',
             'orders.review',
             'orders.rating',
         ])->findOrFail($id);
-
         return view('gigs.show', compact('gig'));
     }
 
@@ -254,10 +259,7 @@ class GigController extends Controller
     public function edit($id)
     {
         $gig = Gig::with(['tiers', 'addons'])->findOrFail($id);
-
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         return view('gigs.edit', compact('gig'));
     }
@@ -269,9 +271,7 @@ class GigController extends Controller
     {
         $gig = Gig::findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -283,78 +283,37 @@ class GigController extends Controller
             'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'portfolio_files.*' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
-
-            // Service Tiers validation
             'tiers' => 'nullable|array',
-            'tiers.*.tier_type' => 'required_with:tiers|in:basic,standard,premium',
-            'tiers.*.title' => 'required_with:tiers|string|max:255',
-            'tiers.*.description' => 'required_with:tiers|string',
-            'tiers.*.price' => 'required_with:tiers|numeric|min:0',
-            'tiers.*.delivery_days' => 'required_with:tiers|integer|min:1',
-            'tiers.*.revisions' => 'required_with:tiers|integer|min:0',
-
-            // Add-ons validation
-            'addons' => 'nullable|array',
-            'addons.*.title' => 'required_with:addons|string|max:255',
-            'addons.*.price' => 'required_with:addons|numeric|min:0',
-            'addons.*.extra_delivery_days' => 'nullable|integer',
+            'addons' => 'nullable|array|max:10',
         ]);
+
+        $serviceOptions = $this->validatedServiceOptions($validated);
 
         $validated['is_accepting_orders'] = $request->has('is_accepting_orders');
 
-        $portfolioFiles = $request->file('portfolio_files');
-        $tiersData = $validated['tiers'] ?? [];
-        $addonsData = $validated['addons'] ?? [];
+        if ($request->hasFile('image')) {
+            if ($gig->image && Storage::disk('public')->exists($gig->image)) {
+                Storage::disk('public')->delete($gig->image);
+            }
+            $validated['image'] = $request->file('image')->store('gigs', 'public');
+        }
 
+        $portfolioFiles = $request->file('portfolio_files');
         unset($validated['portfolio_files'], $validated['tiers'], $validated['addons']);
 
-        DB::transaction(function () use ($gig, $request, $validated, $portfolioFiles, $tiersData, $addonsData) {
-            // Handle image replacement
-            if ($request->hasFile('image')) {
-                if ($gig->image && Storage::disk('public')->exists($gig->image)) {
-                    Storage::disk('public')->delete($gig->image);
-                }
-                $validated['image'] = $request->file('image')->store('gigs', 'public');
-            }
+        $gig->update($validated);
 
-            // Update main gig fields
-            $gig->update($validated);
-
-            // Update or recreate tiers
-            if (!empty($tiersData)) {
-                $gig->tiers()->delete(); // Clear old tiers
-                foreach ($tiersData as $tier) {
-                    if (!empty($tier['title'])) {
-                        $gig->tiers()->create($tier);
-                    }
-                }
+        if ($portfolioFiles) {
+            foreach ($portfolioFiles as $file) {
+                $filePath = $file->store('portfolio', 'public');
+                $gig->portfolioItems()->create([
+                    'file_path' => $filePath,
+                    'file_type' => $file->getClientOriginalExtension(),
+                ]);
             }
+        }
 
-            // Update or recreate add-ons
-            if (!empty($addonsData)) {
-                $gig->addons()->delete(); // Clear old addons
-                foreach ($addonsData as $addon) {
-                    if (!empty($addon['title'])) {
-                        $gig->addons()->create([
-                            'title' => $addon['title'],
-                            'price' => $addon['price'],
-                            'extra_delivery_days' => $addon['extra_delivery_days'] ?? 0,
-                        ]);
-                    }
-                }
-            }
-
-            // Upload additional portfolio items
-            if ($portfolioFiles) {
-                foreach ($portfolioFiles as $file) {
-                    $filePath = $file->store('portfolio', 'public');
-                    $gig->portfolioItems()->create([
-                        'file_path' => $filePath,
-                        'file_type' => $file->getClientOriginalExtension(),
-                    ]);
-                }
-            }
-        });
+        $this->syncServiceOptions($gig, $serviceOptions);
 
         return redirect()->route('gigs.show', $gig->id)->with('success', 'Gig updated successfully!');
     }
@@ -371,9 +330,7 @@ class GigController extends Controller
             'orders.rating',
         ])->findOrFail($id);
 
-        if ($gig->user_id !== (Auth::id() ?? 1)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->ensureSellerOwns($gig);
 
         if ($gig->image && Storage::disk('public')->exists($gig->image)) {
             Storage::disk('public')->delete($gig->image);
@@ -388,5 +345,130 @@ class GigController extends Controller
         $gig->delete();
 
         return redirect()->route('gigs.index')->with('success', 'Gig deleted permanently!');
+    }
+
+    /**
+     * Download the seller's completed-order earnings as a spreadsheet-friendly CSV file.
+     */
+    public function exportEarnings(): StreamedResponse
+    {
+        $sellerId = Auth::id();
+        $orders = Order::query()
+            ->with(['gig', 'buyer'])
+            ->where('seller_id', $sellerId)
+            ->where('status', 'completed')
+            ->latest('completed_at')
+            ->get();
+
+        $fileName = 'gigex-earnings-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($orders): void {
+            $output = fopen('php://output', 'w');
+
+            if ($output === false) {
+                return;
+            }
+
+            fputcsv($output, ['GigEx Seller Earnings Summary']);
+            fputcsv($output, ['Generated', now()->format('Y-m-d H:i:s')]);
+            fputcsv($output, ['Completed Orders', $orders->count()]);
+            fputcsv($output, ['Total Earnings', number_format((float) $orders->sum('agreed_price'), 2, '.', '')]);
+            fputcsv($output, []);
+            fputcsv($output, ['Order ID', 'Gig', 'Buyer', 'Package', 'Add-ons', 'Completed At', 'Earnings']);
+
+            foreach ($orders as $order) {
+                $addonNames = collect($order->selected_addons ?? [])->pluck('name')->implode(', ');
+
+                fputcsv($output, [
+                    $order->id,
+                    $order->gig?->title,
+                    $order->buyer?->name,
+                    data_get($order->selected_tier, 'title', 'Base Service'),
+                    $addonNames ?: 'None',
+                    optional($order->completed_at)->format('Y-m-d H:i:s'),
+                    number_format((float) $order->agreed_price, 2, '.', ''),
+                ]);
+            }
+
+            fclose($output);
+        }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function validatedServiceOptions(array $validated): array
+    {
+        $tierOrder = ['basic' => 1, 'standard' => 2, 'premium' => 3];
+        $tiers = [];
+
+        foreach (($validated['tiers'] ?? []) as $name => $tierData) {
+            if (! array_key_exists($name, $tierOrder) || empty($tierData['enabled'])) {
+                continue;
+            }
+
+            $tier = Validator::make($tierData, [
+                'title' => ['required', 'string', 'max:100'],
+                'description' => ['nullable', 'string', 'max:1000'],
+                'price' => ['required', 'numeric', 'min:1', 'max:999999.99'],
+                'delivery_time' => ['required', 'integer', 'min:1', 'max:365'],
+                'revisions' => ['required', 'integer', 'min:0', 'max:100'],
+            ])->validate();
+
+            $tiers[$name] = $tier + ['sort_order' => $tierOrder[$name]];
+        }
+
+        $addons = [];
+
+        foreach (($validated['addons'] ?? []) as $addonData) {
+            $hasContent = filled($addonData['name'] ?? null)
+                || filled($addonData['description'] ?? null)
+                || filled($addonData['price'] ?? null);
+
+            if (! $hasContent) {
+                continue;
+            }
+
+            $addon = Validator::make($addonData, [
+                'name' => ['required', 'string', 'max:100'],
+                'description' => ['nullable', 'string', 'max:1000'],
+                'price' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+                'extra_days' => ['required', 'integer', 'min:0', 'max:365'],
+            ])->validate();
+
+            $addons[] = $addon + ['sort_order' => count($addons) + 1];
+        }
+
+        return compact('tiers', 'addons');
+    }
+
+    private function syncServiceOptions(Gig $gig, array $serviceOptions): void
+    {
+        $savedTierNames = [];
+
+        foreach ($serviceOptions['tiers'] as $name => $tier) {
+            $gig->tiers()->updateOrCreate(['name' => $name], $tier);
+            $savedTierNames[] = $name;
+        }
+
+        if ($savedTierNames === []) {
+            $gig->tiers()->delete();
+        } else {
+            $gig->tiers()->whereNotIn('name', $savedTierNames)->delete();
+        }
+
+        $gig->addons()->delete();
+
+        foreach ($serviceOptions['addons'] as $addon) {
+            $gig->addons()->create($addon);
+        }
+    }
+
+    private function ensureSellerOwns(Gig $gig): void
+    {
+        abort_unless(
+            Auth::check()
+                && Auth::user()->role === 'seller'
+                && (int) $gig->user_id === (int) Auth::id(),
+            403,
+            'You may manage only your own gigs.'
+        );
     }
 }

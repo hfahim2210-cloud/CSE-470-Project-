@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Incoming Hire Requests - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light">
+@include('partials.navigation')
+
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -40,6 +43,8 @@
                     <tr>
                         <th>Buyer</th>
                         <th>Gig</th>
+                        <th>Package & Add-ons</th>
+                        <th>Quote</th>
                         <th>Message</th>
                         <th>Deadline</th>
                         <th>Received</th>
@@ -55,6 +60,19 @@
                                 <div class="small text-muted">{{ $hireRequest->buyer->email }}</div>
                             </td>
                             <td>{{ $hireRequest->gig->title }}</td>
+                            <td style="min-width: 190px;">
+                                <strong>{{ data_get($hireRequest->selected_tier, 'title', 'Base Service') }}</strong>
+                                @if(count($hireRequest->selected_addons ?? []))
+                                    <div class="small text-muted mt-1">
+                                        + {{ collect($hireRequest->selected_addons)->pluck('name')->implode(', ') }}
+                                    </div>
+                                @else
+                                    <div class="small text-muted">No add-ons</div>
+                                @endif
+                            </td>
+                            <td class="text-nowrap fw-bold text-success">
+                                ${{ number_format($hireRequest->quoted_price ?? $hireRequest->gig->price, 2) }}
+                            </td>
                             <td style="min-width: 260px;">{{ $hireRequest->message }}</td>
                             <td>{{ $hireRequest->proposed_deadline->format('d M Y') }}</td>
                             <td>{{ $hireRequest->created_at->format('d M Y, h:i A') }}</td>
@@ -101,7 +119,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="9" class="text-center py-5 text-muted">
                                 No incoming hire requests have been submitted yet.
                             </td>
                         </tr>

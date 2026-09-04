@@ -5,12 +5,20 @@
 @section('content')
 
 {{-- Header Section --}}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 mb-4">
     <div>
         <h2 class="fw-bold mb-1">My Seller Dashboard</h2>
         <p class="text-muted mb-0">Manage, archive, and monitor your active listings.</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ route('seller.analytics.export') }}" class="btn btn-outline-dark d-flex align-items-center">
+            <i class="bi bi-download me-1"></i> Earnings CSV
+        </a>
+
+        <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-primary d-flex align-items-center">
+            <i class="bi bi-inbox-fill me-1"></i> Hire Requests
+        </a>
+
         <a href="{{ route('orders.index') }}" class="btn btn-outline-success d-flex align-items-center">
             <i class="bi bi-box-seam me-1"></i> View Orders
         </a>
@@ -18,6 +26,102 @@
         <a href="{{ route('gigs.create') }}" class="btn btn-primary d-flex align-items-center">
             <i class="bi bi-plus-lg me-1"></i> Create New Gig
         </a>
+    </div>
+</div>
+
+{{-- Financial and order analytics --}}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="small text-muted text-uppercase fw-semibold">Active Orders</div>
+                <div class="display-6 fw-bold text-primary">{{ $activeOrders }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="small text-muted text-uppercase fw-semibold">Completed</div>
+                <div class="display-6 fw-bold text-success">{{ $completedOrders }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="small text-muted text-uppercase fw-semibold">Completion Rate</div>
+                <div class="display-6 fw-bold">{{ number_format($completionRate, 1) }}%</div>
+                <small class="text-muted">{{ $completedOrders }} of {{ $totalOrders }} orders</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="small text-muted text-uppercase fw-semibold">This Month</div>
+                <div class="h2 fw-bold text-success mb-0">${{ number_format($monthlyEarnings, 2) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg">
+        <div class="card h-100 border-0 shadow-sm bg-dark text-white">
+            <div class="card-body">
+                <div class="small text-white-50 text-uppercase fw-semibold">Total Earnings</div>
+                <div class="h2 fw-bold mb-0">${{ number_format($totalEarnings, 2) }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-lg-7">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h3 class="h5 mb-1">Six-Month Earnings</h3>
+                <p class="small text-muted mb-0">Revenue from completed orders only.</p>
+            </div>
+            <div class="card-body px-4">
+                @php($highestMonthlyEarning = max(1, (float) $monthlyBreakdown->max('earnings')))
+                @foreach($monthlyBreakdown as $month)
+                    <div class="row align-items-center g-2 mb-3">
+                        <div class="col-3 small fw-semibold">{{ $month['label'] }}</div>
+                        <div class="col">
+                            <div class="progress" role="progressbar" aria-label="{{ $month['label'] }} earnings" aria-valuenow="{{ $month['earnings'] }}" aria-valuemin="0" aria-valuemax="{{ $highestMonthlyEarning }}" style="height: 12px;">
+                                <div class="progress-bar bg-success" style="width: {{ ($month['earnings'] / $highestMonthlyEarning) * 100 }}%"></div>
+                            </div>
+                        </div>
+                        <div class="col-3 text-end">
+                            <strong>${{ number_format($month['earnings'], 2) }}</strong>
+                            <div class="small text-muted">{{ $month['orders'] }} {{ Str::plural('order', $month['orders']) }}</div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h3 class="h5 mb-1">Recent Payout Activity</h3>
+                <p class="small text-muted mb-0">Your latest completed orders.</p>
+            </div>
+            <div class="list-group list-group-flush">
+                @forelse($recentCompletedOrders as $order)
+                    <a href="{{ route('orders.show', $order) }}" class="list-group-item list-group-item-action px-4 py-3">
+                        <div class="d-flex justify-content-between gap-3">
+                            <div class="text-truncate">
+                                <div class="fw-semibold text-truncate">{{ $order->gig?->title ?? 'Deleted gig' }}</div>
+                                <small class="text-muted">{{ $order->buyer?->name ?? 'Buyer' }} · {{ optional($order->completed_at)->format('d M Y') }}</small>
+                            </div>
+                            <strong class="text-success">+${{ number_format($order->agreed_price, 2) }}</strong>
+                        </div>
+                    </a>
+                @empty
+                    <div class="text-center text-muted px-4 py-5">Completed-order earnings will appear here.</div>
+                @endforelse
+            </div>
+        </div>
     </div>
 </div>
 
@@ -45,7 +149,7 @@
                 <div class="col-md-4 mb-4">
                     <div class="card h-100 shadow-sm border-0">
                         @if($gig->image)
-                            <img src="{{ asset('storage/' . $gig->image) }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ $gig->title }}">
+                            <img src="{{ route('media.show', ['path' => $gig->image]) }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ $gig->title }}">
                         @else
                             <div class="bg-secondary text-white text-center py-5">No Cover Image</div>
                         @endif
@@ -119,7 +223,7 @@
                 <div class="col-md-4 mb-4">
                     <div class="card h-100 shadow-sm border-0 opacity-75">
                         @if($gig->image)
-                            <img src="{{ asset('storage/' . $gig->image) }}" class="card-img-top" style="height: 180px; object-fit: cover; filter: grayscale(50%);" alt="{{ $gig->title }}">
+                            <img src="{{ route('media.show', ['path' => $gig->image]) }}" class="card-img-top" style="height: 180px; object-fit: cover; filter: grayscale(50%);" alt="{{ $gig->title }}">
                         @else
                             <div class="bg-secondary text-white text-center py-5">No Cover Image</div>
                         @endif

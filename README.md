@@ -29,6 +29,16 @@
 2. **Marketplace Discovery:** Dynamic public feed with real-time keyword search, category filtering, and price sorting.
 3. **Hire Request & Order System:** Request submission workflows, status tracking (In Progress, Review), and order management.
 4. **Deliverables & Reviews:** File delivery submission, revision requests, star rating system, and text reviews.
+5. **Seller Analytics:** Active/completed order metrics, completion rate, six-month revenue, total earnings, and downloadable CSV summaries.
+6. **Service Packages & Add-ons:** Optional Basic/Standard/Premium packages and paid extras with pricing snapshots carried into hire requests and orders.
+
+### Added seller workflow
+
+1. Run php artisan migrate.
+2. Sign in as a seller and open **My Seller Dashboard** to view financial analytics or download the earnings CSV.
+3. Create or edit a gig to configure service packages and up to 10 paid add-ons.
+4. A buyer selects a package and add-ons on the hire-request form; the calculated quote becomes the accepted order price.
+5. After a completed order, the buyer selects a rating with the clickable 1–5 star interface.
 
 ---
 

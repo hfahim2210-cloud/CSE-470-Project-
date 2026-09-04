@@ -54,9 +54,9 @@ class FeedbackController extends Controller
 
     private function ensureBuyerMayLeaveFeedback(Order $order): void
     {
-        // Keeps the same temporary-auth behavior already used in DeliverableController.
-        // Once real authentication is fully connected, only the actual buyer may submit.
-        if (Auth::check() && Auth::id() !== $order->buyer_id) {
+        if (! Auth::check()
+            || Auth::user()->role !== 'buyer'
+            || (int) Auth::id() !== (int) $order->buyer_id) {
             abort(403, 'Only the buyer assigned to this order can leave feedback.');
         }
 

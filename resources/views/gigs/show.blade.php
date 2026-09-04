@@ -6,8 +6,11 @@
     <title>{{ $gig->title }} - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light py-5">
+    @include('partials.navigation')
+
     <div class="container">
         {{-- Flash Messages --}}
         @if(session('success'))
@@ -24,15 +27,15 @@
             </div>
         @endif
 
-        <a href="{{ route('gigs.index') }}" class="btn btn-outline-secondary mb-4">&leftarrow; Back to All Gigs</a>
+        <a href="{{ route('gigs.marketplace') }}" class="btn btn-outline-secondary mb-4">&leftarrow; Back to Marketplace</a>
 
         <div class="row">
-            {{-- Left Column: Gig Details, Pricing Tiers, Add-ons & Media --}}
+            {{-- Left Column: Gig Details & Media --}}
             <div class="col-lg-8 mb-4">
-                <div class="card shadow-sm border-0 overflow-hidden mb-4">
+                <div class="card shadow-sm border-0 overflow-hidden">
                     {{-- Uploaded Cover Image Display --}}
                     @if($gig->image)
-                        <img src="{{ Storage::url($gig->image) }}" class="card-img-top" alt="{{ $gig->title }}" style="max-height: 420px; object-fit: cover;">
+                        <img src="{{ route('media.show', ['path' => $gig->image]) }}" class="card-img-top" alt="{{ $gig->title }}" style="max-height: 420px; object-fit: cover;">
                     @else
                         <div class="bg-secondary text-white text-center py-5">
                             <p class="mb-0 fs-5">📷 No Cover Image Uploaded</p>
@@ -56,64 +59,40 @@
                         <h5 class="fw-bold">About This Gig</h5>
                         <p class="card-text text-secondary mb-4" style="white-space: pre-line; line-height: 1.7;">{{ $gig->description }}</p>
 
-                        {{-- 📦 Service Packages & Pricing Tiers --}}
-                        @if($gig->tiers && $gig->tiers->count() > 0)
+                        @if($gig->tiers->isNotEmpty())
                             <hr class="my-4">
-                            <h5 class="fw-bold mb-3"><i class="bi bi-layers text-primary me-2"></i>Select a Service Package</h5>
-                            
-                            {{-- Package Selector Tabs --}}
-                            <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
-                                @foreach($gig->tiers as $index => $tier)
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link {{ $index === 0 ? 'active fw-bold' : '' }} text-capitalize" 
-                                                id="pills-{{ $tier->tier_type }}-tab" 
-                                                data-bs-toggle="pill" 
-                                                data-bs-target="#pills-{{ $tier->tier_type }}" 
-                                                type="button" 
-                                                role="tab">
-                                            {{ $tier->tier_type }} (${{ number_format($tier->price, 2) }})
-                                        </button>
-                                    </li>
-                                @endforeach
-                            </ul>
-
-                            {{-- Tab Contents --}}
-                            <div class="tab-content border rounded p-3 bg-light" id="pills-tabContent">
-                                @foreach($gig->tiers as $index => $tier)
-                                    <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}" id="pills-{{ $tier->tier_type }}" role="tabpanel">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <h6 class="fw-bold mb-0">{{ $tier->title }}</h6>
-                                            <span class="fs-4 fw-bold text-success">${{ number_format($tier->price, 2) }}</span>
-                                        </div>
-                                        <p class="text-muted small mb-3">{{ $tier->description }}</p>
-                                        
-                                        <div class="d-flex gap-4 text-secondary small border-top pt-2">
-                                            <div><i class="bi bi-clock me-1"></i><strong>{{ $tier->delivery_days }}</strong> {{ Str::plural('Day', $tier->delivery_days) }} Delivery</div>
-                                            <div><i class="bi bi-arrow-repeat me-1"></i><strong>{{ $tier->revisions }}</strong> {{ Str::plural('Revision', $tier->revisions) }}</div>
+                            <h5 class="fw-bold mb-3">Service Packages</h5>
+                            <div class="row g-3">
+                                @foreach($gig->tiers as $tier)
+                                    <div class="col-md-4">
+                                        <div class="card h-100 {{ $tier->name === 'standard' ? 'border-primary shadow-sm' : '' }}">
+                                            <div class="card-body">
+                                                <span class="badge {{ $tier->name === 'standard' ? 'bg-primary' : 'bg-secondary' }} text-uppercase mb-2">{{ $tier->name }}</span>
+                                                <h6 class="fw-bold">{{ $tier->title }}</h6>
+                                                <div class="h4 text-success">${{ number_format($tier->price, 2) }}</div>
+                                                <div class="small text-muted mb-2">{{ $tier->delivery_time }} {{ Str::plural('day', $tier->delivery_time) }} · {{ $tier->revisions }} {{ Str::plural('revision', $tier->revisions) }}</div>
+                                                <p class="small mb-0">{{ $tier->description ?: 'Service package' }}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 @endforeach
                             </div>
                         @endif
 
-                        {{-- ⚡ Extra Paid Add-ons --}}
-                        @if($gig->addons && $gig->addons->count() > 0)
-                            <hr class="my-4">
-                            <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle-fill text-primary me-2"></i>Available Optional Add-ons</h5>
-                            <div class="list-group">
-                                @foreach($gig->addons as $addon)
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div>
-                                            <h6 class="mb-1 fw-bold">{{ $addon->title }}</h6>
-                                            @if($addon->extra_delivery_days > 0)
-                                                <small class="text-muted">Adds +{{ $addon->extra_delivery_days }} {{ Str::plural('day', $addon->extra_delivery_days) }} to delivery time</small>
-                                            @else
-                                                <small class="text-muted">No extra delivery time required</small>
-                                            @endif
+                        @if($gig->addons->isNotEmpty())
+                            <div class="mt-4">
+                                <h5 class="fw-bold mb-3">Available Add-ons</h5>
+                                <div class="list-group">
+                                    @foreach($gig->addons as $addon)
+                                        <div class="list-group-item d-flex justify-content-between gap-3">
+                                            <div>
+                                                <strong>{{ $addon->name }}</strong>
+                                                <div class="small text-muted">{{ $addon->description ?: 'Optional service extra' }}{{ $addon->extra_days ? ' · +'.$addon->extra_days.' day(s)' : '' }}</div>
+                                            </div>
+                                            <strong class="text-success text-nowrap">+${{ number_format($addon->price, 2) }}</strong>
                                         </div>
-                                        <span class="badge bg-primary rounded-pill fs-6">+${{ number_format($addon->price, 2) }}</span>
-                                    </div>
-                                @endforeach
+                                    @endforeach
+                                </div>
                             </div>
                         @endif
 
@@ -128,11 +107,11 @@
                                             @if(Str::endsWith($item->file_path, ['.pdf']))
                                                 <div class="card-body text-center d-flex flex-column justify-content-center bg-light rounded">
                                                     <p class="fs-1 mb-1">📄</p>
-                                                    <a href="{{ Storage::url($item->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">View PDF Sample</a>
+                                                    <a href="{{ route('media.show', ['path' => $item->file_path]) }}" target="_blank" class="btn btn-sm btn-outline-primary">View PDF Sample</a>
                                                 </div>
                                             @else
-                                                <a href="{{ Storage::url($item->file_path) }}" target="_blank">
-                                                    <img src="{{ Storage::url($item->file_path) }}" class="img-fluid rounded" style="height: 140px; width: 100%; object-fit: cover;" alt="Portfolio Sample">
+                                                <a href="{{ route('media.show', ['path' => $item->file_path]) }}" target="_blank">
+                                                    <img src="{{ route('media.show', ['path' => $item->file_path]) }}" class="img-fluid rounded" style="height: 140px; width: 100%; object-fit: cover;" alt="Portfolio Sample">
                                                 </a>
                                             @endif
                                         </div>
@@ -145,26 +124,56 @@
                 </div>
             </div>
 
-            {{-- Right Column: Pricing Summary, Capacity Check, Order Action, & Seller Controls --}}
+            {{-- Right Column: Pricing, Capacity Check, Order Action, & Seller Controls --}}
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted">Starting Base Price</span>
-                            <span class="fs-2 fw-bold text-success">${{ number_format($gig->price, 2) }}</span>
+                            <span class="text-muted">{{ $gig->tiers->isNotEmpty() ? 'Starting at' : 'Price' }}</span>
+                            <span class="fs-2 fw-bold text-success">${{ number_format($gig->tiers->min('price') ?? $gig->price, 2) }}</span>
                         </div>
 
                         <div class="mb-3">
-                            <strong>⏱️ Base Delivery Time:</strong>
+                            <strong>⏱️ Delivery Time:</strong>
                             <span>{{ $gig->delivery_time }} {{ Str::plural('Day', $gig->delivery_time) }}</span>
                         </div>
 
                         <hr>
 
-                        {{-- ⚡ Dynamic Hire Button / Capacity State Logic --}}
+                        @php
+                            $viewerOrder = Auth::check()
+                                ? $gig->orders->first(fn ($order) =>
+                                    (int) $order->buyer_id === (int) Auth::id()
+                                    || (int) $order->seller_id === (int) Auth::id()
+                                )
+                                : null;
+                        @endphp
+
+                        {{-- Dynamic action based on guest, buyer and seller permissions. --}}
                         <div class="mb-3">
-                            @if($gig->orders->isNotEmpty())
-                                <a href="{{ route('orders.show', $gig->orders->first()) }}" class="btn btn-success btn-lg w-100 mb-2">
+                            @if(!Auth::check())
+                                <a href="{{ route('login') }}" class="btn btn-success btn-lg w-100 mb-2">
+                                    Log In to Hire
+                                </a>
+                                <div class="text-center">
+                                    <small class="text-muted">Guests may browse gigs. A buyer account is required to hire.</small>
+                                </div>
+                            @elseif(Auth::user()->role === 'seller' && (int) Auth::id() === (int) $gig->user_id)
+                                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                    <i class="bi bi-person-x-fill me-1"></i> This Is Your Own Gig
+                                </button>
+                                <div class="text-center">
+                                    <small class="text-muted">Sellers cannot submit hire requests for their own gigs.</small>
+                                </div>
+                            @elseif(Auth::user()->role === 'seller')
+                                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                    Buyer Account Required
+                                </button>
+                                <div class="text-center">
+                                    <small class="text-muted">Seller accounts cannot submit hire requests.</small>
+                                </div>
+                            @elseif($viewerOrder)
+                                <a href="{{ route('orders.show', $viewerOrder) }}" class="btn btn-success btn-lg w-100 mb-2">
                                     Open Order & Deliverable
                                 </a>
                             @elseif($gig->isAvailable())
@@ -200,29 +209,32 @@
                             @endif
                         </div>
 
-                        <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-success w-100 mb-2">
-                            Review Hire Requests
-                        </a>
-
-                        <a href="{{ route('orders.index') }}" class="btn btn-outline-primary w-100 mb-4">View All Orders</a>
-
-                        {{-- Seller Actions: Edit & Delete --}}
-                        <div class="border-top pt-3">
-                            <h6 class="fw-bold text-muted mb-3">Manage Listing</h6>
-                            <div class="d-grid gap-2">
-                                <a href="{{ route('gigs.edit', $gig->id) }}" class="btn btn-warning">
-                                    ✏️ Edit Gig
+                        @auth
+                            @if(Auth::user()->role === 'seller' && (int) Auth::id() === (int) $gig->user_id)
+                                <a href="{{ route('hire-requests.incoming') }}" class="btn btn-outline-success w-100 mb-2">
+                                    Review Hire Requests
                                 </a>
 
-                                <form action="{{ route('gigs.destroy', $gig->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this gig? This action will permanently remove all files and cannot be undone.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-outline-danger w-100">
-                                        🗑️ Delete Gig
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                                <a href="{{ route('orders.index') }}" class="btn btn-outline-primary w-100 mb-4">View All Orders</a>
+
+                                <div class="border-top pt-3">
+                                    <h6 class="fw-bold text-muted mb-3">Manage Listing</h6>
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ route('gigs.edit', $gig->id) }}" class="btn btn-warning">
+                                            ✏️ Edit Gig
+                                        </a>
+
+                                        <form action="{{ route('gigs.destroy', $gig->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this gig? This action will permanently remove all files and cannot be undone.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-outline-danger w-100">
+                                                🗑️ Delete Gig
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endif
+                        @endauth
 
                     </div>
                 </div>

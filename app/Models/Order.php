@@ -17,6 +17,8 @@ class Order extends Model
         'seller_id',
         'buyer_id',
         'agreed_price',
+        'selected_tier',
+        'selected_addons',
         'status',
         'due_date',
         'completed_at',
@@ -26,6 +28,8 @@ class Order extends Model
     {
         return [
             'agreed_price' => 'decimal:2',
+            'selected_tier' => 'array',
+            'selected_addons' => 'array',
             'due_date' => 'datetime',
             'completed_at' => 'datetime',
         ];

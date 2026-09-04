@@ -37,6 +37,16 @@ class Gig extends Model
         return $this->hasMany(PortfolioItem::class);
     }
 
+    public function tiers(): HasMany
+    {
+        return $this->hasMany(GigTier::class)->orderBy('sort_order');
+    }
+
+    public function addons(): HasMany
+    {
+        return $this->hasMany(GigAddon::class)->orderBy('sort_order');
+    }
+
     /**
      * Get all orders created for this gig.
      */
@@ -51,7 +61,7 @@ class Gig extends Model
     public function activeOrdersCount(): int
     {
         return $this->orders()
-            ->whereIn('status', ['pending', 'in_progress'])
+            ->whereIn('status', ['not_started', 'in_progress', 'under_review', 'revision_requested'])
             ->where('created_at', '>=', now()->startOfWeek())
             ->count();
     }
@@ -66,15 +76,5 @@ class Gig extends Model
         }
 
         return $this->activeOrdersCount() < $this->max_weekly_orders;
-    }
-
-    public function tiers()
-    {
-       return $this->hasMany(GigTier::class);
-    }
-
-    public function addons()
-    {
-      return $this->hasMany(GigAddon::class);
     }
 }

@@ -20,6 +20,9 @@ class HireRequest extends Model
         'seller_id',
         'message',
         'proposed_deadline',
+        'selected_tier',
+        'selected_addons',
+        'quoted_price',
         'status',
         'accepted_at',
     ];
@@ -28,6 +31,9 @@ class HireRequest extends Model
     {
         return [
             'proposed_deadline' => 'date',
+            'selected_tier' => 'array',
+            'selected_addons' => 'array',
+            'quoted_price' => 'decimal:2',
             'accepted_at' => 'datetime',
         ];
     }

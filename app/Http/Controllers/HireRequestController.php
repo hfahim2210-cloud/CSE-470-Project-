@@ -10,6 +10,7 @@ use App\Support\CurrentUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class HireRequestController extends Controller
@@ -29,7 +30,7 @@ class HireRequestController extends Controller
             'You cannot submit a hire request for your own gig.'
         );
 
-        $gig->load('user');
+        $gig->load(['user', 'tiers', 'addons']);
 
         return view('hire_requests.create', compact('gig', 'buyer'));
     }
@@ -52,7 +53,59 @@ class HireRequestController extends Controller
         $validated = $request->validate([
             'message' => ['required', 'string', 'min:10', 'max:1000'],
             'proposed_deadline' => ['required', 'date', 'after_or_equal:today'],
+            'tier_id' => ['nullable', 'integer'],
+            'addon_ids' => ['nullable', 'array', 'max:10'],
+            'addon_ids.*' => ['integer', 'distinct'],
         ]);
+
+        $gig->load(['tiers', 'addons']);
+        $tier = null;
+
+        if (! empty($validated['tier_id'])) {
+            $tier = $gig->tiers->firstWhere('id', (int) $validated['tier_id']);
+
+            if (! $tier) {
+                throw ValidationException::withMessages([
+                    'tier_id' => 'The selected service package is not available for this gig.',
+                ]);
+            }
+        } elseif ($gig->tiers->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'tier_id' => 'Please select a service package.',
+            ]);
+        }
+
+        $addonIds = collect($validated['addon_ids'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+        $addons = $gig->addons->whereIn('id', $addonIds)->values();
+
+        if ($addons->count() !== $addonIds->count()) {
+            throw ValidationException::withMessages([
+                'addon_ids' => 'One or more selected add-ons are not available for this gig.',
+            ]);
+        }
+
+        $tierSnapshot = $tier ? [
+            'id' => $tier->id,
+            'name' => $tier->name,
+            'title' => $tier->title,
+            'description' => $tier->description,
+            'price' => (float) $tier->price,
+            'delivery_time' => $tier->delivery_time,
+            'revisions' => $tier->revisions,
+        ] : null;
+        $addonSnapshots = $addons->map(fn ($addon): array => [
+            'id' => $addon->id,
+            'name' => $addon->name,
+            'description' => $addon->description,
+            'price' => (float) $addon->price,
+            'extra_days' => $addon->extra_days,
+        ])->all();
+        $quotedPrice = (float) ($tier?->price ?? $gig->price)
+            + (float) $addons->sum('price');
 
         $alreadyPending = HireRequest::query()
             ->where('gig_id', $gig->id)
@@ -74,6 +127,9 @@ class HireRequestController extends Controller
             'seller_id' => $gig->user_id,
             'message' => $validated['message'],
             'proposed_deadline' => $validated['proposed_deadline'],
+            'selected_tier' => $tierSnapshot,
+            'selected_addons' => $addonSnapshots,
+            'quoted_price' => $quotedPrice,
             'status' => HireRequest::STATUS_PENDING,
         ]);
 
@@ -140,7 +196,9 @@ class HireRequestController extends Controller
             $order->gig_id = $lockedRequest->gig_id;
             $order->seller_id = $lockedRequest->seller_id;
             $order->buyer_id = $lockedRequest->buyer_id;
-            $order->agreed_price = $lockedRequest->gig->price;
+            $order->agreed_price = $lockedRequest->quoted_price ?? $lockedRequest->gig->price;
+            $order->selected_tier = $lockedRequest->selected_tier;
+            $order->selected_addons = $lockedRequest->selected_addons;
             $order->status = 'not_started';
             $order->due_date = $lockedRequest->proposed_deadline
                 ?? now()->addDays($lockedRequest->gig->delivery_time);

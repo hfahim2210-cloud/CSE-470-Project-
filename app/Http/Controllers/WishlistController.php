@@ -14,7 +14,7 @@ class WishlistController extends Controller
      */
     public function index()
     {
-        $wishlists = Wishlist::where('user_id', Auth::id() ?? 1)
+        $wishlists = Wishlist::where('user_id', Auth::id())
                         ->with('gig.user')
                         ->latest()
                         ->get();
@@ -28,7 +28,7 @@ class WishlistController extends Controller
     public function store($gigId)
     {
         Wishlist::firstOrCreate([
-            'user_id' => Auth::id() ?? 1,
+            'user_id' => Auth::id(),
             'gig_id' => $gigId,
         ]);
 
@@ -40,7 +40,7 @@ class WishlistController extends Controller
      */
     public function destroy($gigId)
     {
-        Wishlist::where('user_id', Auth::id() ?? 1)
+        Wishlist::where('user_id', Auth::id())
                 ->where('gig_id', $gigId)
                 ->delete();
 

@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Student Gig Exchange</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('css/gigex.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light">
+
+@include('partials.navigation')
 
 <div class="container py-5" style="max-width: 400px;">
     <div class="card shadow-sm">

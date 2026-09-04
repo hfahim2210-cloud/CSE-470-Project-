@@ -154,8 +154,9 @@ class DeliverableController extends Controller
 
     private function ensureSellerMaySubmit(Order $order): void
     {
-        // Once authentication is merged, only the actual seller may submit.
-        if (Auth::check() && Auth::id() !== $order->seller_id) {
+        if (! Auth::check()
+            || Auth::user()->role !== 'seller'
+            || (int) Auth::id() !== (int) $order->seller_id) {
             abort(403, 'Only the seller assigned to this order can submit work.');
         }
 
@@ -174,8 +175,9 @@ class DeliverableController extends Controller
 
     private function ensureBuyerMayRequestRevision(Order $order): void
     {
-        // Match the project's current authentication fallback used by approval.
-        if (Auth::check() && Auth::id() !== $order->buyer_id) {
+        if (! Auth::check()
+            || Auth::user()->role !== 'buyer'
+            || (int) Auth::id() !== (int) $order->buyer_id) {
             abort(403, 'Only the buyer assigned to this order can request revisions.');
         }
 
@@ -197,8 +199,9 @@ class DeliverableController extends Controller
 
     private function ensureBuyerMayApprove(Order $order): void
     {
-        // Once authentication is merged, only the actual buyer may approve.
-        if (Auth::check() && Auth::id() !== $order->buyer_id) {
+        if (! Auth::check()
+            || Auth::user()->role !== 'buyer'
+            || (int) Auth::id() !== (int) $order->buyer_id) {
             abort(403, 'Only the buyer assigned to this order can approve work.');
         }
 

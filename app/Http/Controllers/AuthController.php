@@ -23,8 +23,14 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'email' => [
+                'required',
+                'email',
+                'regex:/^[a-zA-Z0-9._%+-]+@g\.bracu\.ac\.bd$/i'
+            ],
             'password' => 'required',
+        ], [
+            'email.regex' => 'Only official BRACU student emails ending with @g.bracu.ac.bd are allowed.'
         ]);
 
         if (Auth::attempt($credentials)) {
@@ -58,9 +64,16 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => [
+                'required',
+                'email',
+                'unique:users,email',
+                'regex:/^[a-zA-Z0-9._%+-]+@g\.bracu\.ac\.bd$/i'
+            ],
             'password' => 'required|min:6|confirmed',
             'role' => 'required|in:buyer,seller',
+        ], [
+            'email.regex' => 'Registration requires an official BRACU student email ending with @g.bracu.ac.bd.'
         ]);
 
         $user = User::create([
